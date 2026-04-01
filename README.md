@@ -1,6 +1,6 @@
 # Plum OPD Claim Adjudication System
 
-An AI-powered system that automates the adjudication (approval/rejection) of Outpatient Department (OPD) insurance claims. Built for Plum's AI Automation Engineer Intern Assignment.
+An AI-powered system that automates the adjudication (approval/rejection) of Outpatient Department (OPD) insurance claims. Built for Plum's AI Automation Engineer Assignment.
 
 ## Architecture
 
