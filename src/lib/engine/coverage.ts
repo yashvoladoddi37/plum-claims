@@ -90,18 +90,33 @@ export function checkCoverage(claim: ClaimInput): StepResult {
     }
   }
 
-  // 4. Check bill items for cosmetic/excluded procedures
-  if (bill.teeth_whitening && bill.teeth_whitening > 0) {
-    if (!rejectedItems.some(r => r.includes('whitening'))) {
-      rejectedItems.push('Teeth whitening - cosmetic procedure');
-      partialAmount += bill.teeth_whitening;
+  // 4. Check ALL bill items for cosmetic/excluded procedures
+  // This handles AI-extracted bill keys (e.g. 'professional_teeth_whitening_session')
+  // as well as hardcoded keys (e.g. 'teeth_whitening').
+  const cosmeticKeywords = ['whitening', 'botox', 'liposuction', 'rhinoplasty', 'cosmetic', 'bleaching'];
+  const weightLossKeywords = ['diet_plan', 'weight_loss', 'bariatric', 'slimming'];
+
+  for (const [key, value] of Object.entries(bill)) {
+    if (typeof value !== 'number' || value <= 0) continue;
+    const keyLower = key.toLowerCase();
+
+    // Cosmetic procedure detection
+    if (cosmeticKeywords.some(kw => keyLower.includes(kw))) {
+      const readableName = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      if (!rejectedItems.some(r => r.toLowerCase().includes('whitening') || r.toLowerCase().includes('cosmetic'))) {
+        rejectedItems.push(`${readableName} - cosmetic procedure`);
+        partialAmount += value;
+      }
     }
-  }
-  if (bill.diet_plan && bill.diet_plan > 0) {
-    const dietExclusion = matchesExclusion('diet plan weight loss');
-    if (dietExclusion) {
-      rejectedItems.push(`Diet plan - ${dietExclusion.toLowerCase()}`);
-      partialAmount += bill.diet_plan;
+
+    // Weight loss treatment detection
+    if (weightLossKeywords.some(kw => keyLower.includes(kw))) {
+      const readableName = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const dietExclusion = matchesExclusion('diet plan weight loss');
+      if (dietExclusion && !rejectedItems.some(r => r.toLowerCase().includes('diet') || r.toLowerCase().includes('weight'))) {
+        rejectedItems.push(`${readableName} - ${dietExclusion.toLowerCase()}`);
+        partialAmount += value;
+      }
     }
   }
 
@@ -121,10 +136,13 @@ export function checkCoverage(claim: ClaimInput): StepResult {
   }
 
   // Also check bill keys for MRI/CT
-  if (bill.mri_scan && bill.mri_scan > 0) {
+  const billKeysLower = Object.entries(bill)
+    .filter(([, v]) => typeof v === 'number' && v > 0)
+    .map(([k]) => k.toLowerCase());
+  if (billKeysLower.some(k => k.includes('mri') || k.includes('ct_scan'))) {
     if (!reasons.includes('PRE_AUTH_MISSING')) {
       reasons.push('PRE_AUTH_MISSING');
-      details.push('MRI requires pre-authorization for claims above ₹10000.');
+      details.push('MRI/CT scan requires pre-authorization for claims above ₹10000.');
     }
   }
 

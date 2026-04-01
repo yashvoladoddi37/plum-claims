@@ -180,22 +180,31 @@ function getCategoryLimit(claim: ClaimInput): number | null {
   const treatment = (prescription.treatment || '').toLowerCase();
   const procedures = (prescription.procedures || []).map(p => p.toLowerCase());
 
-  // Dental claims
+  // Dental claims — check bill keys for dental-related keywords too
+  const billKeys = bill ? Object.keys(bill).map(k => k.toLowerCase()) : [];
   if (diagnosis.includes('tooth') || diagnosis.includes('dental') ||
       diagnosis.includes('root canal') || diagnosis.includes('cavity') ||
+      diagnosis.includes('pulpitis') || diagnosis.includes('molar') ||
       procedures.some(p => p.includes('root canal') || p.includes('filling') ||
         p.includes('extraction') || p.includes('cleaning')) ||
-      (bill?.root_canal !== undefined)) {
+      billKeys.some(k => k.includes('root_canal') || k.includes('dental') ||
+        k.includes('filling') || k.includes('extraction'))) {
     return getDentalSubLimit();
   }
 
   // Diagnostic test claims (standalone)
-  if (bill?.mri_scan || bill?.diagnostic_tests) {
+  if (billKeys.some(k => k.includes('mri') || k.includes('ct_scan') || k.includes('x_ray') ||
+      k.includes('ultrasound') || k.includes('diagnostic'))) {
     const total = Object.entries(bill || {})
-      .filter(([k]) => k !== 'consultation_fee')
+      .filter(([k]) => !k.includes('consultation'))
       .reduce((sum, [, v]) => sum + (typeof v === 'number' ? v : 0), 0);
-    if (total > 0 && (!bill?.consultation_fee || bill.consultation_fee / claim.claim_amount < 0.3)) {
-      return getDiagnosticSubLimit();
+    if (total > 0) {
+      const consultFee = Object.entries(bill || {})
+        .filter(([k]) => k.includes('consultation'))
+        .reduce((sum, [, v]) => sum + (typeof v === 'number' ? v : 0), 0);
+      if (!consultFee || consultFee / claim.claim_amount < 0.3) {
+        return getDiagnosticSubLimit();
+      }
     }
   }
 

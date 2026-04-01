@@ -27,6 +27,7 @@ export async function GET(
       extraction: claim.extraction_json ? JSON.parse(claim.extraction_json) : null,
       decision_reasons: claim.decision_reasons_json ? JSON.parse(claim.decision_reasons_json) : [],
       pipeline_result: claim.pipeline_result_json ? JSON.parse(claim.pipeline_result_json) : [],
+      reviewer_overrides: claim.reviewer_overrides_json ? JSON.parse(claim.reviewer_overrides_json) : [],
     });
   } catch (error) {
     console.error('Claim detail error:', error);

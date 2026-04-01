@@ -45,6 +45,13 @@ export const claims = sqliteTable('claims', {
   appeal_status: text('appeal_status'),
   appeal_reason: text('appeal_reason'),
 
+  // Human-in-the-loop review (Agentic AI workflow)
+  reviewer_decision: text('reviewer_decision'),       // Final decision after human review
+  reviewer_notes: text('reviewer_notes'),             // Reviewer's notes/reasoning
+  reviewer_overrides_json: text('reviewer_overrides_json'), // Per-agent overrides JSON
+  reviewed_at: text('reviewed_at'),                   // ISO timestamp
+  reviewed_by: text('reviewed_by'),                   // Reviewer identifier
+
   created_at: text('created_at').notNull(),
   updated_at: text('updated_at').notNull(),
 });

@@ -3,16 +3,19 @@
 // Runs all steps in order, synthesizes final decision
 // ============================================================
 
-import { ClaimInput, Decision, StepResult, Member, ClaimDecision, RejectionReason } from '../types';
+import { ClaimInput, Decision, StepResult, Member, ClaimDecision, RejectionReason, AIContext } from '../types';
 import { checkEligibility } from './eligibility';
 import { validateDocuments } from './documents';
 import { checkCoverage } from './coverage';
 import { calculateLimits } from './limits';
 import { detectFraud } from './fraud';
+import { reviewMedicalNecessity } from './medical-review';
 
 interface PipelineContext {
   member: Member | null;
   ytdApprovedAmount?: number;
+  /** AI context from Gemini medical review + RAG (when available) */
+  aiContext?: AIContext;
 }
 
 export function adjudicate(
@@ -27,22 +30,21 @@ export function adjudicate(
   const eligibility = checkEligibility(claim, context.member);
   steps.push(eligibility);
   if (eligibility.decision_impact === 'REJECT') {
-    return synthesize(claimId, claim, steps, startTime);
+    return synthesize(claimId, claim, steps, startTime, context.aiContext);
   }
 
   // Step 2: Document Validation
   const documents = validateDocuments(claim);
   steps.push(documents);
   if (documents.decision_impact === 'REJECT') {
-    return synthesize(claimId, claim, steps, startTime);
+    return synthesize(claimId, claim, steps, startTime, context.aiContext);
   }
 
   // Step 3: Coverage
   const coverage = checkCoverage(claim);
   steps.push(coverage);
-  // Coverage can be PARTIAL — don't exit early, but note the adjustment
   if (coverage.decision_impact === 'REJECT') {
-    return synthesize(claimId, claim, steps, startTime);
+    return synthesize(claimId, claim, steps, startTime, context.aiContext);
   }
 
   // Step 4: Limits (pass adjusted amount from coverage if partial)
@@ -54,24 +56,31 @@ export function adjudicate(
   );
   steps.push(limits);
   if (limits.decision_impact === 'REJECT') {
-    return synthesize(claimId, claim, steps, startTime);
+    return synthesize(claimId, claim, steps, startTime, context.aiContext);
   }
 
   // Step 5: Fraud Detection
   const fraud = detectFraud(claim);
   steps.push(fraud);
   if (fraud.decision_impact === 'MANUAL_REVIEW') {
-    return synthesize(claimId, claim, steps, startTime);
+    return synthesize(claimId, claim, steps, startTime, context.aiContext);
   }
 
-  return synthesize(claimId, claim, steps, startTime);
+  // Step 6: AI Medical Necessity Review
+  // This is where AI ACTUALLY influences the decision.
+  // Low medical necessity score → MANUAL_REVIEW.
+  const medicalReview = reviewMedicalNecessity(claim, context.aiContext);
+  steps.push(medicalReview);
+
+  return synthesize(claimId, claim, steps, startTime, context.aiContext);
 }
 
 function synthesize(
   claimId: string,
   claim: ClaimInput,
   steps: StepResult[],
-  startTime: number
+  startTime: number,
+  aiContext?: AIContext
 ): Decision {
   const processingTime = Date.now() - startTime;
 
@@ -136,8 +145,8 @@ function synthesize(
     nextSteps.push('Approved amount will be processed for reimbursement within 5-7 business days.');
   }
 
-  // Confidence score calculation
-  const confidence = calculateConfidence(steps, decision);
+  // Confidence score calculation — blends rule engine clarity with AI assessment
+  const confidence = calculateConfidence(steps, decision, aiContext);
 
   // Force MANUAL_REVIEW if confidence < 0.70
   if (confidence < 0.70 && decision !== 'REJECTED' && decision !== 'MANUAL_REVIEW') {
@@ -156,32 +165,43 @@ function synthesize(
     steps,
     cashless_approved: cashlessApproved,
     network_discount: networkDiscount,
+    ai_context: aiContext,
     processing_time_ms: processingTime,
   };
 }
 
-function calculateConfidence(steps: StepResult[], decision: ClaimDecision): number {
-  // Deterministic rules have high confidence
-  // Base confidence from rule clarity
-  let confidence = 0.95;
+function calculateConfidence(
+  steps: StepResult[],
+  decision: ClaimDecision,
+  aiContext?: AIContext
+): number {
+  // Base confidence from deterministic rule engine (60% weight)
+  let ruleConfidence = 0.95;
 
   if (decision === 'MANUAL_REVIEW') {
-    confidence = 0.65; // Low confidence by definition
+    ruleConfidence = 0.65;
   } else if (decision === 'REJECTED') {
-    // Rejections on clear rule violations are high confidence
-    confidence = 0.97;
-    // Slightly lower for certain reasons
+    ruleConfidence = 0.97;
     const reasons = steps.flatMap(s => s.reasons);
-    if (reasons.includes('WAITING_PERIOD')) confidence = 0.96;
-    if (reasons.includes('SERVICE_NOT_COVERED')) confidence = 0.97;
-    if (reasons.includes('PER_CLAIM_EXCEEDED')) confidence = 0.98;
-    if (reasons.includes('MISSING_DOCUMENTS')) confidence = 1.0;
+    if (reasons.includes('WAITING_PERIOD')) ruleConfidence = 0.96;
+    if (reasons.includes('PER_CLAIM_EXCEEDED')) ruleConfidence = 0.98;
+    if (reasons.includes('MISSING_DOCUMENTS')) ruleConfidence = 1.0;
   } else if (decision === 'PARTIAL') {
-    confidence = 0.92;
-  } else {
-    // APPROVED
-    confidence = 0.95;
+    ruleConfidence = 0.92;
   }
 
-  return confidence;
+  // If no AI context, return rule confidence only
+  if (!aiContext || aiContext.medical_necessity_score === undefined) {
+    return ruleConfidence;
+  }
+
+  // Blend: 60% rule engine + 40% AI medical necessity
+  // This is where AI actually contributes to the final confidence score
+  const aiScore = aiContext.medical_necessity_score;
+  const blended = (ruleConfidence * 0.6) + (aiScore * 0.4);
+
+  // AI flags reduce confidence
+  const flagPenalty = (aiContext.flags?.length || 0) * 0.03;
+
+  return Math.max(0.1, Math.min(1.0, blended - flagPenalty));
 }

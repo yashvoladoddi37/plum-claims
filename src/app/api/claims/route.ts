@@ -7,9 +7,10 @@ import '@/lib/db/seed';
 import { claims, members } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { adjudicate } from '@/lib/engine/pipeline';
-import { ClaimInput, Member } from '@/lib/types';
-import { extractFromDocuments } from '@/lib/ai/extract';
+import { ClaimInput, Member, AIContext } from '@/lib/types';
+import { extractFromDocuments, runMedicalReview } from '@/lib/ai/extract';
 import { isAIAvailable } from '@/lib/ai/gemini';
+import { generateExplanation } from '@/lib/engine/explainability';
 import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = 'force-dynamic';
@@ -93,9 +94,40 @@ export async function POST(request: NextRequest) {
     // Look up member
     const member = db.select().from(members).where(eq(members.id, claimInput.member_id)).get() as Member | undefined;
 
-    // Run adjudication
+    // Build AI context — runs medical review + RAG even for JSON-path claims
+    let aiContext: AIContext | undefined;
+    if (isAIAvailable() && claimInput.documents?.prescription?.diagnosis) {
+      try {
+        const prescription = claimInput.documents.prescription;
+        const { ragResults, medicalReview } = await runMedicalReview(
+          prescription.diagnosis,
+          prescription.procedures || [],
+          prescription.medicines_prescribed || [],
+          prescription.tests_prescribed || [],
+        );
+        aiContext = {
+          medical_necessity_score: medicalReview?.medical_necessity_score as number | undefined,
+          medical_necessity_reasoning: medicalReview?.reasoning as string | undefined,
+          flags: medicalReview?.flags as string[] | undefined,
+          coverage_assessment: medicalReview?.coverage_assessment as string | undefined,
+          rag_chunks_used: ragResults.map(r => ({
+            source: r.chunk.source,
+            category: r.chunk.category,
+            text: r.chunk.text,
+            similarity: r.similarity,
+          })),
+        };
+      } catch (err) {
+        console.warn('AI medical review failed, proceeding with rules only:', err);
+      }
+    }
+
+    // Run adjudication with AI context
     const claimId = generateClaimId();
-    const decision = adjudicate(claimInput, { member: member || null }, claimId);
+    const decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+
+    // Generate explainability data
+    const explanation = generateExplanation(decision, claimInput, aiContext);
 
     // Store claim
     const now = new Date().toISOString();
@@ -112,7 +144,11 @@ export async function POST(request: NextRequest) {
       cashless_request: claimInput.cashless_request || false,
       input_data_json: JSON.stringify(claimInput),
       documents_json: documentFiles.length > 0 ? JSON.stringify(documentFiles.map(f => ({ mimeType: f.mimeType, size: f.base64.length }))) : null,
-      extraction_json: aiExtraction ? JSON.stringify(aiExtraction) : null,
+      extraction_json: JSON.stringify({
+        ...(aiExtraction || {}),
+        ...(aiContext ? { aiContext } : {}),
+        explanation,
+      }),
       decision: decision.decision,
       decision_reasons_json: JSON.stringify(decision.rejection_reasons),
       decision_notes: decision.notes,
@@ -127,6 +163,7 @@ export async function POST(request: NextRequest) {
       claim_id: claimId,
       status: decision.decision,
       decision,
+      explanation,
       processing_time_ms: decision.processing_time_ms,
     });
   } catch (error) {

@@ -1,65 +1,273 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
-export default function Home() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface Claim { [key: string]: any; }
+
+const STATUS_COLORS: Record<string, string> = {
+  APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  REJECTED: "bg-red-100 text-red-800 border-red-200",
+  PARTIAL: "bg-amber-100 text-amber-800 border-amber-200",
+  MANUAL_REVIEW: "bg-orange-100 text-orange-800 border-orange-200",
+  PROCESSING: "bg-blue-100 text-blue-800 border-blue-200",
+  APPEALED: "bg-purple-100 text-purple-800 border-purple-200",
+};
+
+const STATUS_ICONS: Record<string, string> = {
+  APPROVED: "✅", REJECTED: "❌", PARTIAL: "⚠️",
+  MANUAL_REVIEW: "🔍", PROCESSING: "⏳", APPEALED: "📋",
+};
+
+// Rejection reason labels for the chart
+const REASON_LABELS: Record<string, string> = {
+  WAITING_PERIOD: "Waiting Period",
+  SERVICE_NOT_COVERED: "Not Covered",
+  EXCLUDED_CONDITION: "Exclusion",
+  PRE_AUTH_MISSING: "No Pre-Auth",
+  MISSING_DOCUMENTS: "Missing Docs",
+  PER_CLAIM_EXCEEDED: "Over Limit",
+  ANNUAL_LIMIT_EXCEEDED: "Annual Limit",
+  SUB_LIMIT_EXCEEDED: "Sub-Limit",
+  DUPLICATE_CLAIM: "Duplicate",
+  NOT_MEDICALLY_NECESSARY: "Not Necessary",
+};
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse bg-muted rounded ${className}`} />;
+}
+
+export default function Dashboard() {
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  useEffect(() => {
+    fetch("/api/claims")
+      .then((r) => r.json())
+      .then((data) => { setClaims(data.claims || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const stats = {
+    total: claims.length,
+    approved: claims.filter((c) => c.status === "APPROVED").length,
+    rejected: claims.filter((c) => c.status === "REJECTED").length,
+    partial: claims.filter((c) => c.status === "PARTIAL").length,
+    manual: claims.filter((c) => c.status === "MANUAL_REVIEW").length,
+    appealed: claims.filter((c) => c.status === "APPEALED").length,
+    totalAmount: claims.reduce((s, c) => s + (c.claim_amount || 0), 0),
+    approvedAmount: claims.reduce((s, c) => s + (c.approved_amount || 0), 0),
+    avgConfidence: claims.length > 0 ? claims.reduce((s, c) => s + (c.confidence_score || 0), 0) / claims.length : 0,
+    avgProcessingTime: claims.length > 0 ? Math.round(claims.reduce((s, c) => s + (c.processing_time_ms || 0), 0) / claims.length) : 0,
+  };
+
+  // Rejection reason frequency
+  const rejectionReasons: Record<string, number> = {};
+  claims.forEach(c => {
+    if (c.decision_reasons_json) {
+      try {
+        const reasons = JSON.parse(c.decision_reasons_json);
+        if (Array.isArray(reasons)) {
+          reasons.forEach((r: string) => { rejectionReasons[r] = (rejectionReasons[r] || 0) + 1; });
+        }
+      } catch { /* */ }
+    }
+  });
+  const sortedReasons = Object.entries(rejectionReasons)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 6);
+  const maxReasonCount = sortedReasons.length > 0 ? sortedReasons[0][1] : 1;
+
+  const approvalRate = stats.total > 0 ? ((stats.approved / stats.total) * 100).toFixed(0) : "—";
+
+  const filteredClaims = statusFilter === "all" ? claims : claims.filter(c => c.status === statusFilter);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Claims Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">AI-powered OPD claim adjudication with RAG-enhanced medical review</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="flex gap-2">
+          <Link href="/policy"><Button variant="outline">📚 Policy Explorer</Button></Link>
+          <Link href="/submit"><Button>+ New Claim</Button></Link>
         </div>
-      </main>
+      </div>
+
+      {/* Stats Cards — Row 1 */}
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Total Claims</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-bold">{stats.total}</div></CardContent></Card>
+            <Card className="border-l-4 border-l-emerald-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Approved</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-bold text-emerald-600">{stats.approved}</div></CardContent></Card>
+            <Card className="border-l-4 border-l-red-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Rejected</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-bold text-red-600">{stats.rejected}</div></CardContent></Card>
+            <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Partial</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-bold text-amber-600">{stats.partial}</div></CardContent></Card>
+            <Card className="border-l-4 border-l-orange-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Manual Review</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-bold text-orange-600">{stats.manual}</div></CardContent></Card>
+          </div>
+
+          {/* Stats Cards — Row 2 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Total Claimed</CardTitle></CardHeader>
+              <CardContent><div className="text-xl font-bold">₹{stats.totalAmount.toLocaleString()}</div></CardContent></Card>
+            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Total Approved</CardTitle></CardHeader>
+              <CardContent><div className="text-xl font-bold text-emerald-600">₹{stats.approvedAmount.toLocaleString()}</div></CardContent></Card>
+            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Avg Confidence</CardTitle></CardHeader>
+              <CardContent><div className={`text-xl font-bold ${stats.avgConfidence >= 0.9 ? "text-emerald-600" : stats.avgConfidence >= 0.7 ? "text-amber-600" : "text-red-600"}`}>
+                {stats.total > 0 ? `${(stats.avgConfidence * 100).toFixed(0)}%` : "—"}</div></CardContent></Card>
+            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Approval Rate</CardTitle></CardHeader>
+              <CardContent><div className="text-xl font-bold">{approvalRate}%</div>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                  <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%` }} />
+                </div>
+              </CardContent></Card>
+          </div>
+        </>
+      )}
+
+      {/* Rejection Reasons Chart + Quick Actions */}
+      {!loading && stats.total > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Rejection Reasons */}
+          {sortedReasons.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Common Rejection Reasons</CardTitle></CardHeader>
+              <CardContent className="space-y-2.5">
+                {sortedReasons.map(([reason, count]) => (
+                  <div key={reason} className="flex items-center gap-3">
+                    <div className="w-28 text-xs text-muted-foreground text-right truncate">{REASON_LABELS[reason] || reason}</div>
+                    <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+                      <div className="h-full bg-red-400 rounded transition-all" style={{ width: `${(count / maxReasonCount) * 100}%` }} />
+                    </div>
+                    <div className="w-6 text-xs font-mono font-bold text-right">{count}</div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Status Distribution */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Decision Distribution</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-1 h-32 mb-2">
+                {[
+                  { key: 'APPROVED', count: stats.approved, color: 'bg-emerald-500', label: 'Approved' },
+                  { key: 'PARTIAL', count: stats.partial, color: 'bg-amber-500', label: 'Partial' },
+                  { key: 'REJECTED', count: stats.rejected, color: 'bg-red-500', label: 'Rejected' },
+                  { key: 'MANUAL_REVIEW', count: stats.manual, color: 'bg-orange-500', label: 'Review' },
+                  { key: 'APPEALED', count: stats.appealed, color: 'bg-purple-500', label: 'Appealed' },
+                ].map(item => {
+                  const pct = stats.total > 0 ? (item.count / stats.total) * 100 : 0;
+                  return (
+                    <div key={item.key} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-xs font-bold">{item.count}</span>
+                      <div className="w-full relative" style={{ height: `${Math.max(pct, 4)}%` }}>
+                        <div className={`w-full h-full ${item.color} rounded-t-md`} />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Claims Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Claims</CardTitle>
+            <div className="flex items-center gap-2">
+              {["all", "APPROVED", "REJECTED", "PARTIAL", "MANUAL_REVIEW", "APPEALED"].map(s => (
+                <Button key={s} variant={statusFilter === s ? "default" : "ghost"} className="text-xs h-7 px-2"
+                  onClick={() => setStatusFilter(s)}>
+                  {s === "all" ? "All" : `${STATUS_ICONS[s] || ""} ${s.slice(0, 3)}`}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : filteredClaims.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-4xl mb-3">📋</div>
+              <p className="text-muted-foreground mb-1">{statusFilter === "all" ? "No claims submitted yet" : `No ${statusFilter} claims`}</p>
+              <p className="text-sm text-muted-foreground mb-4">Submit a claim or run test cases to get started</p>
+              <div className="flex gap-2 justify-center">
+                <Link href="/submit"><Button>Submit Claim</Button></Link>
+                <Link href="/test-runner"><Button variant="outline">Run Tests</Button></Link>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-32">Claim ID</TableHead>
+                    <TableHead>Member</TableHead>
+                    <TableHead className="text-right">Claimed</TableHead>
+                    <TableHead className="text-right">Approved</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Confidence</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClaims.map((claim) => (
+                    <TableRow key={claim.id} className="cursor-pointer group hover:bg-muted/50 transition-colors">
+                      <TableCell>
+                        <Link href={`/claims/${claim.id}`} className="font-mono text-sm text-violet-600 hover:underline group-hover:text-violet-800">
+                          {claim.id}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="font-medium">{claim.member_name}</TableCell>
+                      <TableCell className="text-right font-mono">₹{claim.claim_amount?.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono font-medium">
+                        {claim.status === "REJECTED" ? "—" : `₹${(claim.approved_amount || 0).toLocaleString()}`}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${STATUS_COLORS[claim.status] || ""} border`}>
+                          {STATUS_ICONS[claim.status] || ""} {claim.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {claim.confidence_score ? (
+                          <span className={`font-mono text-sm ${claim.confidence_score >= 0.9 ? "text-emerald-600" : claim.confidence_score >= 0.7 ? "text-amber-600" : "text-red-600"}`}>
+                            {(claim.confidence_score * 100).toFixed(0)}%
+                          </span>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{claim.treatment_date}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

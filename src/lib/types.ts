@@ -92,6 +92,15 @@ export interface StepResult {
   };
 }
 
+// AI-enhanced context passed into the pipeline
+export interface AIContext {
+  medical_necessity_score?: number;
+  medical_necessity_reasoning?: string;
+  flags?: string[];
+  coverage_assessment?: string;
+  rag_chunks_used?: { source: string; category: string; text: string; similarity: number }[];
+}
+
 export interface Decision {
   claim_id: string;
   decision: ClaimDecision;
@@ -103,6 +112,7 @@ export interface Decision {
   steps: StepResult[];
   cashless_approved?: boolean;
   network_discount?: number;
+  ai_context?: AIContext;
   processing_time_ms: number;
 }
 
@@ -137,4 +147,41 @@ export interface ExtractionResult {
   medical_necessity_score: number;
   medical_necessity_reasoning: string;
   raw_text: string;
+}
+
+// ---------- Line Item Decision (Visual Diff) ----------
+
+export interface LineItemDecision {
+  description: string;
+  category: LineItemCategory;
+  claimed_amount: number;
+  approved_amount: number;
+  status: 'approved' | 'rejected' | 'reduced';
+  reason?: string;
+}
+
+// ---------- Explainability ----------
+
+export interface Counterfactual {
+  condition: string;
+  result: string;
+  icon: string;
+}
+
+export interface DecisionExplanation {
+  summary: string;              // Natural language explanation
+  key_factors: string[];        // Bullet points of main factors
+  policy_references: string[];  // Which policy sections were triggered
+  counterfactuals: Counterfactual[];
+  confidence_breakdown: {
+    rule_engine: number;
+    ai_medical: number;
+    blended: number;
+  };
+  line_items: LineItemDecision[];
+  amount_waterfall: {
+    label: string;
+    amount: number;
+    type: 'start' | 'deduction' | 'addition' | 'total';
+  }[];
 }
