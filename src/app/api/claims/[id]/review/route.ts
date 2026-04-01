@@ -38,7 +38,7 @@ export async function POST(
       );
     }
 
-    const claim = db.select().from(claims).where(eq(claims.id, id)).get();
+    const claim = await db.select().from(claims).where(eq(claims.id, id)).get();
     if (!claim) {
       return Response.json({ error: 'Claim not found' }, { status: 404 });
     }
@@ -57,7 +57,7 @@ export async function POST(
 
     const now = new Date().toISOString();
 
-    db.update(claims)
+    await db.update(claims)
       .set({
         status: body.final_decision,
         decision: body.final_decision,

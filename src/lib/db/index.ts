@@ -1,75 +1,10 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from './schema';
-import path from 'path';
-import fs from 'fs';
 
-function initDB() {
-  const DB_PATH = path.join(process.cwd(), 'data', 'claims.db');
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL || 'file:local.db',
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-  // Ensure data directory exists
-  const dataDir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-
-  const sqlite = new Database(DB_PATH);
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
-
-  // Initialize tables
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS members (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      join_date TEXT NOT NULL,
-      policy_start_date TEXT NOT NULL,
-      policy_id TEXT DEFAULT 'PLUM_OPD_2024'
-    );
-
-    CREATE TABLE IF NOT EXISTS claims (
-      id TEXT PRIMARY KEY,
-      member_id TEXT NOT NULL,
-      member_name TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'PROCESSING',
-      claim_amount REAL NOT NULL,
-      approved_amount REAL,
-      treatment_date TEXT NOT NULL,
-      submission_date TEXT NOT NULL,
-      hospital TEXT,
-      cashless_request INTEGER DEFAULT 0,
-      input_data_json TEXT,
-      documents_json TEXT,
-      extraction_json TEXT,
-      decision TEXT,
-      decision_reasons_json TEXT,
-      decision_notes TEXT,
-      confidence_score REAL,
-      processing_time_ms INTEGER,
-      pipeline_result_json TEXT,
-      appeal_status TEXT,
-      appeal_reason TEXT,
-      reviewer_decision TEXT,
-      reviewer_notes TEXT,
-      reviewer_overrides_json TEXT,
-      reviewed_at TEXT,
-      reviewed_by TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
-
-  // Add missing columns if upgrading existing DB
-  const addCol = (table: string, col: string, type: string) => {
-    try { sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
-  };
-  addCol('claims', 'reviewer_decision', 'TEXT');
-  addCol('claims', 'reviewer_notes', 'TEXT');
-  addCol('claims', 'reviewer_overrides_json', 'TEXT');
-  addCol('claims', 'reviewed_at', 'TEXT');
-  addCol('claims', 'reviewed_by', 'TEXT');
-
-  return drizzle(sqlite, { schema });
-}
-
-export const db = initDB();
+export const db = drizzle(client, { schema });

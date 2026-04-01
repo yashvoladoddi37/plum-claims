@@ -13,7 +13,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const claim = db.select().from(claims).where(eq(claims.id, id)).get();
+    const claim = await db.select().from(claims).where(eq(claims.id, id)).get();
 
     if (!claim) {
       return Response.json({ error: 'Claim not found' }, { status: 404 });

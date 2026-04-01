@@ -11,13 +11,14 @@ import { ClaimInput, Member, AIContext } from '@/lib/types';
 import { extractFromDocuments, runMedicalReview } from '@/lib/ai/extract';
 import { isAIAvailable } from '@/lib/ai/gemini';
 import { generateExplanation } from '@/lib/engine/explainability';
+import { agenticAdjudicate } from '@/lib/ai/agent';
 import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = 'force-dynamic';
 
-function generateClaimId(): string {
-  const count = db.select().from(claims).all().length;
-  return `CLM_${String(count + 1).padStart(5, '0')}`;
+async function generateClaimId(): Promise<string> {
+  const allClaims = await db.select().from(claims).all();
+  return `CLM_${String(allClaims.length + 1).padStart(5, '0')}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Look up member
-    const member = db.select().from(members).where(eq(members.id, claimInput.member_id)).get() as Member | undefined;
+    const member = await db.select().from(members).where(eq(members.id, claimInput.member_id)).get() as Member | undefined;
 
     // Build AI context — runs medical review + RAG even for JSON-path claims
     let aiContext: AIContext | undefined;
@@ -122,16 +123,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Run adjudication with AI context
-    const claimId = generateClaimId();
-    const decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+    // Run adjudication — agentic path when AI is available, deterministic fallback otherwise
+    const claimId = await generateClaimId();
+    let decision;
+    let agentReasoning = null;
+
+    if (isAIAvailable()) {
+      // Agentic path: LLM orchestrator decides which tools to call
+      console.log(`🤖 Running agentic adjudication for ${claimId}...`);
+      try {
+        const agentDecision = await agenticAdjudicate(claimInput, member || null, aiContext, claimId);
+        decision = agentDecision;
+        agentReasoning = agentDecision.agent_reasoning;
+        console.log(`✅ Agent decision: ${decision.decision} (${decision.confidence_score * 100}% confidence, ${agentDecision.agent_reasoning.length} tool calls)`);
+      } catch (agentErr) {
+        // Fallback to deterministic pipeline if agent fails
+        console.warn('⚠️ Agent failed, falling back to deterministic pipeline:', agentErr);
+        decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+      }
+    } else {
+      // Deterministic path: hardcoded sequential pipeline
+      decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+    }
 
     // Generate explainability data
     const explanation = generateExplanation(decision, claimInput, aiContext);
 
     // Store claim
     const now = new Date().toISOString();
-    db.insert(claims).values({
+    await db.insert(claims).values({
       id: claimId,
       member_id: claimInput.member_id,
       member_name: claimInput.member_name,
@@ -147,6 +167,7 @@ export async function POST(request: NextRequest) {
       extraction_json: JSON.stringify({
         ...(aiExtraction || {}),
         ...(aiContext ? { aiContext } : {}),
+        ...(agentReasoning ? { agentReasoning } : {}),
         explanation,
       }),
       decision: decision.decision,
@@ -181,9 +202,7 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get('status');
     const memberId = url.searchParams.get('member_id');
 
-    let query = db.select().from(claims).orderBy(desc(claims.created_at));
-
-    const allClaims = query.all().filter(c => {
+    const allClaims = (await db.select().from(claims).orderBy(desc(claims.created_at)).all()).filter((c: { status: string; member_id: string }) => {
       if (status && c.status !== status) return false;
       if (memberId && c.member_id !== memberId) return false;
       return true;

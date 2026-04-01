@@ -15,11 +15,11 @@ const SEED_MEMBERS = [
   { id: 'EMP010', name: 'Deepak Shah', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
 ];
 
-export function seedMembers() {
+export async function seedMembers() {
   for (const member of SEED_MEMBERS) {
-    const existing = db.select().from(members).where(eq(members.id, member.id)).get();
+    const existing = await db.select().from(members).where(eq(members.id, member.id)).get();
     if (!existing) {
-      db.insert(members).values({
+      await db.insert(members).values({
         ...member,
         policy_id: 'PLUM_OPD_2024',
       }).run();

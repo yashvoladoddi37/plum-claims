@@ -22,7 +22,7 @@ export async function POST(
       );
     }
 
-    const claim = db.select().from(claims).where(eq(claims.id, id)).get();
+    const claim = await db.select().from(claims).where(eq(claims.id, id)).get();
     if (!claim) {
       return Response.json({ error: 'Claim not found' }, { status: 404 });
     }
@@ -41,7 +41,7 @@ export async function POST(
       );
     }
 
-    db.update(claims)
+    await db.update(claims)
       .set({
         appeal_status: 'PENDING',
         appeal_reason: reason,
