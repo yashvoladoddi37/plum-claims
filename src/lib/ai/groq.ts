@@ -52,8 +52,8 @@ export async function withGroqRotation<T>(
   operation: (provider: ReturnType<typeof createGroq>) => Promise<T>
 ): Promise<T> {
   const keys = getApiKeys();
-  // For rate limits: try each key. For network errors: retry up to 3 times total.
-  const maxAttempts = Math.max(keys.length, 3);
+  // Cycle through all keys, then do a second pass with delays for TPM cooldown
+  const maxAttempts = keys.length * 2;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -85,12 +85,23 @@ export async function withGroqRotation<T>(
 
       if (attempt < maxAttempts - 1) {
         if (isRateLimit) {
-          console.warn(`⚠️ Groq limit hit (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Rotating key...`);
+          // Extract retry-after from error response headers if available
+          const retryAfter = error?.responseHeaders?.['retry-after'];
+          const completedFirstPass = attempt >= keys.length - 1;
+
+          if (completedFirstPass) {
+            // All keys tried once — wait for TPM cooldown before second pass
+            const waitSec = retryAfter ? Math.min(parseInt(retryAfter, 10), 20) : 10;
+            console.warn(`⚠️ All keys exhausted (attempt ${attempt + 1}/${maxAttempts}). Waiting ${waitSec}s for TPM cooldown...`);
+            await new Promise(r => setTimeout(r, waitSec * 1000));
+          } else {
+            console.warn(`⚠️ Groq limit hit (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Rotating key...`);
+          }
           rotateGroqKey();
           continue;
         }
         if (isNetworkError) {
-          const delay = 1000 * (attempt + 1); // 1s, 2s, 3s backoff
+          const delay = 1000 * (attempt + 1);
           console.warn(`⚠️ Groq network error (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Retrying in ${delay}ms...`);
           await new Promise(r => setTimeout(r, delay));
           continue;
