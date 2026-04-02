@@ -52,7 +52,8 @@ export async function withGroqRotation<T>(
   operation: (provider: ReturnType<typeof createGroq>) => Promise<T>
 ): Promise<T> {
   const keys = getApiKeys();
-  const maxAttempts = keys.length; // Try every available key
+  // For rate limits: try each key. For network errors: retry up to 3 times total.
+  const maxAttempts = Math.max(keys.length, 3);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -61,8 +62,8 @@ export async function withGroqRotation<T>(
     } catch (error: any) {
       const msg = (error?.message || '').toLowerCase();
       const status = error?.status || error?.statusCode;
-      // Catch rate limits (429), quota exceeded, and resource exhausted errors
-      const isRetryable =
+
+      const isRateLimit =
         status === 429 ||
         status === 413 ||
         msg.includes('429') ||
@@ -74,15 +75,31 @@ export async function withGroqRotation<T>(
         msg.includes('tokens per') ||
         msg.includes('requests per');
 
-      if (isRetryable && attempt < maxAttempts - 1) {
-        console.warn(`⚠️ Groq limit hit (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Rotating key...`);
-        rotateGroqKey();
-        continue;
+      const isNetworkError =
+        msg.includes('timeout') ||
+        msg.includes('connect') ||
+        msg.includes('econnrefused') ||
+        msg.includes('econnreset') ||
+        msg.includes('fetch failed') ||
+        msg.includes('network');
+
+      if (attempt < maxAttempts - 1) {
+        if (isRateLimit) {
+          console.warn(`⚠️ Groq limit hit (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Rotating key...`);
+          rotateGroqKey();
+          continue;
+        }
+        if (isNetworkError) {
+          const delay = 1000 * (attempt + 1); // 1s, 2s, 3s backoff
+          console.warn(`⚠️ Groq network error (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Retrying in ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
       }
       throw error;
     }
   }
-  throw new Error('Groq rotation failed — all API keys exhausted');
+  throw new Error('Groq rotation failed — all attempts exhausted');
 }
 
 /**
