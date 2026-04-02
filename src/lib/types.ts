@@ -132,6 +132,7 @@ export interface ExtractionResult {
   documents_detected: { document_type: DocumentType; confidence: number }[];
   patient_name: string | null;
   employee_id: string | null;
+  member_id: string | null;
   treatment_date: string | null;
   doctor: {
     name: string | null;
