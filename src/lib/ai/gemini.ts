@@ -59,3 +59,8 @@ export function getEmbeddingModel() {
 export function isAIAvailable(): boolean {
   return !!getActiveKey();
 }
+
+/** Check if the agentic pipeline (Groq) is available */
+export function isAgentAvailable(): boolean {
+  return !!process.env.GROQ_API_KEY;
+}

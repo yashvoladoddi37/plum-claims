@@ -1,9 +1,11 @@
 // ============================================================
 // AI Document Extraction + Medical Review
-// Uses Gemini for document understanding and RAG for context
+// Uses open-source OCR (unpdf/tesseract.js) + Groq/Llama for
+// structured extraction and RAG-powered medical review
 // ============================================================
 
-import { getGenerativeModel, isAIAvailable } from './gemini';
+import { isGroqAvailable, groqGenerateJSON } from './groq';
+import { extractRawText } from './ocr';
 import { retrieveContext, formatRetrievedContext, RetrievalResult } from './rag';
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_USER_PROMPT, buildMedicalReviewPrompt } from './prompts';
 import { ExtractionResult } from '../types';
@@ -21,59 +23,38 @@ export interface AIExtractionResponse {
 }
 
 /**
- * Extract structured data from document images/PDFs using Gemini vision.
- * Also runs medical necessity review with RAG context in a single flow.
+ * Extract structured data from document images/PDFs using open-source OCR + Groq LLM.
+ * Step 1: OCR text extraction (unpdf for PDFs, tesseract.js for images)
+ * Step 2: Groq/Llama structured extraction from raw text
+ * Step 3: RAG retrieval + medical necessity review
  */
 export async function extractFromDocuments(
   files: { base64: string; mimeType: string }[]
 ): Promise<AIExtractionResponse> {
-  if (!isAIAvailable()) {
-    throw new Error('AI service unavailable — GEMINI_API_KEY not configured');
+  if (!isGroqAvailable()) {
+    throw new Error('AI service unavailable — GROQ_API_KEY not configured');
   }
 
-  const model = getGenerativeModel();
+  // Step 1: Extract raw text from all documents using open-source OCR
+  console.log(`📄 Running OCR on ${files.length} document(s)...`);
+  const rawText = await extractRawText(files);
 
-  // Build multimodal parts: system prompt + images + extraction prompt
-  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
-
-  parts.push({ text: EXTRACTION_SYSTEM_PROMPT });
-
-  for (const file of files) {
-    parts.push({
-      inlineData: {
-        mimeType: file.mimeType,
-        data: file.base64,
-      },
-    });
+  if (!rawText.trim()) {
+    throw new Error('OCR failed to extract any text from the uploaded documents');
   }
 
-  parts.push({ text: EXTRACTION_USER_PROMPT });
+  console.log(`✅ OCR extracted ${rawText.length} characters`);
 
-  // Call Gemini for extraction
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.1, // Low temperature for factual extraction
-    },
-  });
+  // Step 2: Send raw text to Groq/Llama for structured extraction
+  const extractionPrompt = `${EXTRACTION_SYSTEM_PROMPT}\n\nDOCUMENT TEXT (extracted via OCR):\n---\n${rawText}\n---\n\n${EXTRACTION_USER_PROMPT}`;
 
-  const responseText = result.response.text();
-  let extraction: ExtractionResult;
-
-  try {
-    extraction = JSON.parse(responseText);
-  } catch {
-    // Try to extract JSON from markdown code blocks
-    const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      extraction = JSON.parse(jsonMatch[1]);
-    } else {
-      throw new Error(`Failed to parse Gemini extraction response: ${responseText.slice(0, 200)}`);
-    }
+  const extraction = await groqGenerateJSON<ExtractionResult>(extractionPrompt, { temperature: 0.1 });
+  // Inject raw_text from OCR if the model didn't include it
+  if (!extraction.raw_text) {
+    extraction.raw_text = rawText;
   }
 
-  // RAG: Retrieve relevant context for medical review
+  // Step 3: RAG retrieval + medical necessity review
   const diagnosis = extraction.diagnosis || '';
   const treatments = [
     ...(extraction.medicines_prescribed || []),
@@ -84,7 +65,6 @@ export async function extractFromDocuments(
   const ragQuery = `${diagnosis} ${treatments}`;
   const ragResults = await retrieveContext(ragQuery, 5);
 
-  // Medical necessity review with RAG context
   let medicalReview = null;
   if (diagnosis) {
     const ragContextStr = formatRetrievedContext(ragResults);
@@ -97,16 +77,7 @@ export async function extractFromDocuments(
     );
 
     try {
-      const reviewResult = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: reviewPrompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      });
-
-      const reviewText = reviewResult.response.text();
-      medicalReview = JSON.parse(reviewText);
+      medicalReview = await groqGenerateJSON<AIExtractionResponse['medicalReview'] & object>(reviewPrompt, { temperature: 0.2 });
     } catch (err) {
       console.warn('Medical review failed, continuing without it:', err);
     }
@@ -132,20 +103,15 @@ export async function runMedicalReview(
   const ragQuery = `${diagnosis} ${treatments.join(', ')} ${medicines.join(', ')} ${tests.join(', ')}`;
   const ragResults = await retrieveContext(ragQuery, 5);
 
-  if (!isAIAvailable()) {
+  if (!isGroqAvailable()) {
     return { ragResults, medicalReview: null };
   }
 
-  const model = getGenerativeModel();
   const ragContextStr = formatRetrievedContext(ragResults);
   const reviewPrompt = buildMedicalReviewPrompt(diagnosis, treatments, medicines, tests, ragContextStr);
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: reviewPrompt }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
-    });
-    const medicalReview = JSON.parse(result.response.text());
+    const medicalReview = await groqGenerateJSON(reviewPrompt, { temperature: 0.2 });
     return { ragResults, medicalReview };
   } catch {
     return { ragResults, medicalReview: null };

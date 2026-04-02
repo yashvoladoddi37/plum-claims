@@ -2,14 +2,26 @@
 // POST /api/settings — Update API key at runtime
 
 import { NextRequest } from 'next/server';
-import { setApiKey, getApiKeyInfo, isAIAvailable, getGenerativeModel } from '@/lib/ai/gemini';
+import { isGroqAvailable, groqGenerate } from '@/lib/ai/groq';
 
 export const dynamic = 'force-dynamic';
 
+function getKeyInfo(): { configured: boolean; source: 'env' | 'none'; maskedKey: string | null } {
+  const key = process.env.GROQ_API_KEY;
+  if (key) {
+    return {
+      configured: true,
+      source: 'env',
+      maskedKey: key.slice(0, 4) + '••••' + key.slice(-4),
+    };
+  }
+  return { configured: false, source: 'none', maskedKey: null };
+}
+
 export async function GET() {
-  const keyInfo = getApiKeyInfo();
+  const keyInfo = getKeyInfo();
   return Response.json({
-    ai_available: isAIAvailable(),
+    ai_available: isGroqAvailable(),
     ...keyInfo,
   });
 }
@@ -19,19 +31,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { api_key, action } = body;
 
-    // Clear key
     if (action === 'clear') {
-      setApiKey(null);
-      const keyInfo = getApiKeyInfo();
+      delete process.env.GROQ_API_KEY;
       return Response.json({
         success: true,
-        message: 'Runtime API key cleared. Falling back to environment variable.',
-        ai_available: isAIAvailable(),
-        ...keyInfo,
+        message: 'Groq API key cleared.',
+        ai_available: isGroqAvailable(),
+        ...getKeyInfo(),
       });
     }
 
-    // Validate key
     if (!api_key || typeof api_key !== 'string' || api_key.trim().length < 10) {
       return Response.json(
         { success: false, error: 'Invalid API key format.' },
@@ -41,34 +50,27 @@ export async function POST(request: NextRequest) {
 
     const trimmedKey = api_key.trim();
 
-    // Test the key by making a lightweight API call
-    setApiKey(trimmedKey);
+    // Test the key by making a lightweight call
+    const prevKey = process.env.GROQ_API_KEY;
+    process.env.GROQ_API_KEY = trimmedKey;
     try {
-      const model = getGenerativeModel();
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: 'Respond with exactly: OK' }] }],
-        generationConfig: { maxOutputTokens: 10 },
-      });
-      const text = result.response.text().trim();
-      if (!text) throw new Error('Empty response from API');
+      const text = await groqGenerate('Respond with exactly: OK', { maxOutputTokens: 10 });
+      if (!text) throw new Error('Empty response from Groq');
     } catch (err) {
       // Revert key on failure
-      setApiKey(null);
+      if (prevKey) process.env.GROQ_API_KEY = prevKey;
+      else delete process.env.GROQ_API_KEY;
       return Response.json(
-        {
-          success: false,
-          error: `API key validation failed: ${String(err).slice(0, 200)}`,
-        },
+        { success: false, error: `API key validation failed: ${String(err).slice(0, 200)}` },
         { status: 400 }
       );
     }
 
-    const keyInfo = getApiKeyInfo();
     return Response.json({
       success: true,
-      message: 'API key configured and verified successfully!',
+      message: 'Groq API key configured and verified!',
       ai_available: true,
-      ...keyInfo,
+      ...getKeyInfo(),
     });
   } catch (error) {
     return Response.json(

@@ -1,8 +1,8 @@
-// POST /api/rag/ask — Natural language Q&A about policy using RAG + Gemini
+// POST /api/rag/ask — Natural language Q&A about policy using RAG + Groq/Llama
 
 import { NextRequest } from 'next/server';
 import { retrieveContext, formatRetrievedContext } from '@/lib/ai/rag';
-import { getGenerativeModel, isAIAvailable } from '@/lib/ai/gemini';
+import { isGroqAvailable, groqGenerate } from '@/lib/ai/groq';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,13 +18,13 @@ export async function POST(request: NextRequest) {
     const results = await retrieveContext(question, 5);
     const ragContext = formatRetrievedContext(results);
 
-    // If AI is available, generate a natural language answer
+    // If Groq is available, generate a natural language answer
     let answer = '';
-    if (isAIAvailable()) {
-      const model = getGenerativeModel();
+    if (isGroqAvailable()) {
       const prompt = `You are a helpful insurance policy assistant for Plum OPD Advantage insurance.
 Answer the user's question based ONLY on the policy context provided below.
 Be concise, specific, and cite the relevant policy section.
+When the context includes specific values or amounts from policy_terms, always use those exact values in your answer.
 If the answer is not in the context, say so clearly.
 
 POLICY CONTEXT:
@@ -34,11 +34,7 @@ USER QUESTION: ${question}
 
 Answer in 2-3 sentences maximum. Format amounts in ₹.`;
 
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 300 },
-      });
-      answer = result.response.text();
+      answer = await groqGenerate(prompt, { temperature: 0.2, maxOutputTokens: 300 });
     } else {
       answer = `Based on the policy documents, here's what I found:\n\n${results.slice(0, 3).map(r => `• ${r.chunk.text}`).join('\n\n')}`;
     }

@@ -6,7 +6,7 @@
 // ============================================================
 
 import { generateText, tool, stepCountIs, zodSchema } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
 import { z } from 'zod';
 
 import { checkEligibility } from '../engine/eligibility';
@@ -21,11 +21,11 @@ import { db } from '../db';
 import { members } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
-// Initialize Google provider with API key
-function getGoogleProvider() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
-  return createGoogleGenerativeAI({ apiKey });
+// Initialize Groq provider with API key
+function getGroqProvider() {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
+  return createGroq({ apiKey });
 }
 
 // ---- Tool Definitions ----
@@ -277,13 +277,13 @@ export async function agenticAdjudicate(
   claimId: string = 'CLM_00000'
 ): Promise<AgentDecision> {
   const startTime = Date.now();
-  const google = getGoogleProvider();
+  const groq = getGroqProvider();
   const tools = buildTools(claim, memberRecord, aiContext);
 
   const claimSummary = buildClaimSummary(claim);
 
   const result = await generateText({
-    model: google('gemini-2.5-flash'),
+    model: groq('llama-3.3-70b-versatile'),
     system: SYSTEM_PROMPT,
     prompt: `Process the following OPD insurance claim and make an adjudication decision:\n\n${claimSummary}`,
     tools,

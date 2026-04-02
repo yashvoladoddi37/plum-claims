@@ -9,7 +9,7 @@ import { eq, desc } from 'drizzle-orm';
 import { adjudicate } from '@/lib/engine/pipeline';
 import { ClaimInput, Member, AIContext } from '@/lib/types';
 import { extractFromDocuments, runMedicalReview } from '@/lib/ai/extract';
-import { isAIAvailable } from '@/lib/ai/gemini';
+import { isGroqAvailable } from '@/lib/ai/groq';
 import { generateExplanation } from '@/lib/engine/explainability';
 import { agenticAdjudicate } from '@/lib/ai/agent';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       }
 
       // If AI is available and we have files, extract data
-      if (isAIAvailable() && documentFiles.length > 0) {
+      if (isGroqAvailable() && documentFiles.length > 0) {
         aiExtraction = await extractFromDocuments(documentFiles);
         // Build claim input from AI extraction
         const ext = aiExtraction.extraction;
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // Build AI context — runs medical review + RAG even for JSON-path claims
     let aiContext: AIContext | undefined;
-    if (isAIAvailable() && claimInput.documents?.prescription?.diagnosis) {
+    if (isGroqAvailable() && claimInput.documents?.prescription?.diagnosis) {
       try {
         const prescription = claimInput.documents.prescription;
         const { ragResults, medicalReview } = await runMedicalReview(
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     let decision;
     let agentReasoning = null;
 
-    if (isAIAvailable()) {
+    if (isGroqAvailable()) {
       // Agentic path: LLM orchestrator decides which tools to call
       console.log(`🤖 Running agentic adjudication for ${claimId}...`);
       try {

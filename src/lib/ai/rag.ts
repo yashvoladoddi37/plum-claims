@@ -5,10 +5,26 @@
 // similarity for retrieval. Medical knowledge added as supplementary.
 // ============================================================
 
-import { getEmbeddingModel } from './gemini';
 import policyData from '../../../policy_terms.json';
 import fs from 'fs';
 import path from 'path';
+
+// ---- Local Embeddings via HuggingFace transformers.js ----
+// Uses all-MiniLM-L6-v2 (384-dim) — runs on CPU, no API key needed
+import type { FeatureExtractionPipeline } from '@huggingface/transformers';
+
+let embeddingPipeline: FeatureExtractionPipeline | null = null;
+
+async function getEmbeddingPipeline(): Promise<FeatureExtractionPipeline> {
+  if (!embeddingPipeline) {
+    const { pipeline } = await import('@huggingface/transformers');
+    embeddingPipeline = await pipeline(
+      'feature-extraction',
+      'Xenova/all-MiniLM-L6-v2',
+    ) as FeatureExtractionPipeline;
+  }
+  return embeddingPipeline;
+}
 
 export interface KnowledgeChunk {
   id: string;
@@ -189,11 +205,12 @@ function buildMedicalKnowledge(): KnowledgeChunk[] {
   ];
 }
 
-// ---- Embed Chunks ----
+// ---- Embed Chunks (local MiniLM-L6-v2) ----
 async function embedText(text: string): Promise<number[]> {
-  const model = getEmbeddingModel();
-  const result = await model.embedContent(text);
-  return result.embedding.values;
+  const extractor = await getEmbeddingPipeline();
+  const result = await extractor(text, { pooling: 'mean', normalize: true });
+  // result is a Tensor — convert to flat number array
+  return Array.from(result.data as Float32Array);
 }
 
 export async function initializeKnowledgeBase(): Promise<void> {
@@ -209,11 +226,9 @@ export async function initializeKnowledgeBase(): Promise<void> {
   console.log(`📚 Built ${knowledgeBase.length} knowledge chunks (policy: ${chunkPolicyTerms().length}, rules: ${chunkAdjudicationRules().length}, medical: ${buildMedicalKnowledge().length})`);
 
   try {
-    // Batch embed all chunks
-    const model = getEmbeddingModel();
+    // Batch embed all chunks using local model
     for (const chunk of knowledgeBase) {
-      const result = await model.embedContent(chunk.text);
-      chunk.embedding = result.embedding.values;
+      chunk.embedding = await embedText(chunk.text);
     }
     isInitialized = true;
     console.log(`✅ RAG knowledge base initialized with ${knowledgeBase.length} chunks`);
@@ -238,31 +253,66 @@ export async function retrieveContext(
     filteredChunks = knowledgeBase.filter(c => c.source === sourceFilter);
   }
 
+  let scored: RetrievalResult[] = [];
+
   // If embeddings are available, use vector search
   const hasEmbeddings = filteredChunks.some(c => c.embedding);
   if (hasEmbeddings) {
     try {
       const queryEmbedding = await embedText(query);
-      const scored = filteredChunks
+      scored = filteredChunks
         .filter(c => c.embedding)
         .map(chunk => ({
           chunk,
           similarity: cosineSimilarity(queryEmbedding, chunk.embedding!),
         }))
         .sort((a, b) => b.similarity - a.similarity);
-      return scored.slice(0, topK);
     } catch {
       // Fall through to keyword search
     }
   }
 
-  // Keyword fallback
-  const queryWords = query.toLowerCase().split(/\s+/);
-  const scored = filteredChunks.map(chunk => {
-    const chunkWords = chunk.text.toLowerCase();
-    const matchCount = queryWords.filter(w => chunkWords.includes(w)).length;
-    return { chunk, similarity: matchCount / queryWords.length };
-  }).sort((a, b) => b.similarity - a.similarity);
+  if (scored.length === 0) {
+    // Keyword fallback
+    const queryWords = query.toLowerCase().split(/\s+/);
+    scored = filteredChunks.map(chunk => {
+      const chunkWords = chunk.text.toLowerCase();
+      const matchCount = queryWords.filter(w => chunkWords.includes(w)).length;
+      return { chunk, similarity: matchCount / queryWords.length };
+    }).sort((a, b) => b.similarity - a.similarity);
+  }
+
+  // Source-diverse selection: ensure top results from each source are included
+  // so that policy_terms (with actual values) aren't drowned out by rule descriptions
+  if (!sourceFilter) {
+    const sources = [...new Set(filteredChunks.map(c => c.source))];
+    const perSource = Math.max(1, Math.floor(topK / sources.length));
+    const diverse: RetrievalResult[] = [];
+    const used = new Set<string>();
+
+    // Pick top results per source
+    for (const src of sources) {
+      let count = 0;
+      for (const r of scored) {
+        if (r.chunk.source === src && !used.has(r.chunk.id) && count < perSource) {
+          diverse.push(r);
+          used.add(r.chunk.id);
+          count++;
+        }
+      }
+    }
+
+    // Fill remaining slots with best overall results
+    for (const r of scored) {
+      if (diverse.length >= topK) break;
+      if (!used.has(r.chunk.id)) {
+        diverse.push(r);
+        used.add(r.chunk.id);
+      }
+    }
+
+    return diverse.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
+  }
 
   return scored.slice(0, topK);
 }
