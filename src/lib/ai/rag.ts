@@ -340,6 +340,6 @@ export function getKnowledgeBaseStats() {
       medical_knowledge: allChunks.filter(c => c.source === 'medical_knowledge').length,
     },
     embeddingsLoaded: knowledgeBase.some(c => c.embedding),
-    chunks: allChunks.map(c => ({ id: c.id, source: c.source, category: c.category, textPreview: c.text.slice(0, 120) + '...' })),
+    chunks: allChunks.map(c => ({ id: c.id, source: c.source, category: c.category, textPreview: c.text.slice(0, 120) + '...', text: c.text })),
   };
 }

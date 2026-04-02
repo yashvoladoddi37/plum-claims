@@ -22,21 +22,25 @@ export async function POST(request: NextRequest) {
     let answer = '';
     if (isGroqAvailable()) {
       const prompt = `You are a helpful insurance policy assistant for Plum OPD Advantage insurance.
-Answer the user's question based ONLY on the policy context provided below.
-Be concise, specific, and cite the relevant policy section.
-When the context includes specific values or amounts from policy_terms, always use those exact values in your answer.
-If the answer is not in the context, say so clearly.
+
+RULES:
+1. Answer the user's question DIRECTLY with a clear Yes/No/specific value upfront, then explain why.
+2. Base your answer ONLY on the policy context provided below.
+3. When the context includes specific values or amounts, always use those exact values (format as ₹).
+4. NEVER say "here's what I found" or "based on the documents" — just answer the question directly as if you are the policy expert.
+5. If something is excluded or not covered, say so clearly and explain the reason.
+6. If the answer is not in the context, say "This is not covered in the policy documents I have access to."
 
 POLICY CONTEXT:
 ${ragContext}
 
 USER QUESTION: ${question}
 
-Answer in 2-3 sentences maximum. Format amounts in ₹.`;
+Answer in 2-3 sentences maximum. Start with the direct answer.`;
 
       answer = await groqGenerate(prompt, { temperature: 0.2, maxOutputTokens: 300 });
     } else {
-      answer = `Based on the policy documents, here's what I found:\n\n${results.slice(0, 3).map(r => `• ${r.chunk.text}`).join('\n\n')}`;
+      answer = `From the policy:\n\n${results.slice(0, 3).map(r => `• ${r.chunk.text}`).join('\n\n')}\n\n(AI-generated summary unavailable — showing raw policy excerpts.)`;
     }
 
     return Response.json({

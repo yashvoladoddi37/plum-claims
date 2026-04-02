@@ -4,6 +4,8 @@ An AI-powered system that automates the adjudication (approval/rejection) of Out
 
 Built for Plum's AI Automation Engineer Assignment.
 
+**Live Demo:** [https://plum-claims.vercel.app](https://plum-claims.vercel.app)
+
 ---
 
 ## How It Works
@@ -278,7 +280,9 @@ End-to-end results with the full pipeline (OCR + Groq extraction + agentic adjud
 
 ### Rule Engine Test Cases
 
-Visit [http://localhost:3737/test-runner](http://localhost:3737/test-runner) to run the 10 built-in test cases that validate the deterministic rule engine:
+Visit [http://localhost:3737/test-runner](http://localhost:3737/test-runner) to run all 30 built-in test cases that validate the deterministic rule engine.
+
+#### Original 10 (TC001-TC010)
 
 | ID | Scenario | Expected | Validates |
 |----|----------|----------|-----------|
@@ -292,6 +296,31 @@ Visit [http://localhost:3737/test-runner](http://localhost:3737/test-runner) to 
 | TC008 | 3 claims same day | MANUAL_REVIEW | Fraud detection |
 | TC009 | Weight loss treatment | REJECTED | Policy exclusion |
 | TC010 | Apollo Hospital cashless | APPROVED, ₹3,600 | Network discount (20%) |
+
+#### Additional 20 (TC011-TC030)
+
+| ID | Scenario | Expected | Validates |
+|----|----------|----------|-----------|
+| TC011 | Pharmacy for respiratory infection | APPROVED, ₹1,980 | General claim copay |
+| TC012 | Invalid doctor registration format | REJECTED | DOCTOR_REG_INVALID |
+| TC013 | Prescription missing diagnosis | REJECTED | INVALID_PRESCRIPTION |
+| TC014 | Infertility treatment (IVF) | REJECTED | SERVICE_NOT_COVERED (exclusion) |
+| TC015 | Vision/myopia eye checkup | APPROVED, ₹4,500 | Vision sub-limit, no copay |
+| TC016 | Experimental clinical trial | REJECTED | SERVICE_NOT_COVERED (exclusion) |
+| TC017 | Hypertension within 90-day wait | REJECTED | WAITING_PERIOD (specific ailment) |
+| TC018 | Sinusitis at Fortis (network) | APPROVED, ₹2,400 | Network discount, no copay |
+| TC019 | Missing bill/receipt | REJECTED | MISSING_DOCUMENTS |
+| TC020 | ₹28,000 dental claim | MANUAL_REVIEW | High-value fraud flag |
+| TC021 | Alcoholism treatment | REJECTED | SERVICE_NOT_COVERED (exclusion) |
+| TC022 | Dental filling for cavity | APPROVED, ₹3,500 | Dental sub-limit, no copay |
+| TC023 | CT scan without pre-auth | REJECTED | PRE_AUTH_MISSING |
+| TC024 | Claim within initial 30-day wait | REJECTED | WAITING_PERIOD (initial) |
+| TC025 | Homeopathy for eczema | APPROVED, ₹3,000 | Alt medicine sub-limit |
+| TC026 | ₹400 claim (below minimum) | REJECTED | BELOW_MIN_AMOUNT |
+| TC027 | Exactly ₹5,000 claim | MANUAL_REVIEW | Limit boundary fraud flag |
+| TC028 | Extraction + botox | PARTIAL, ₹5,000 | Cosmetic partial exclusion |
+| TC029 | Cashless at Max Healthcare | APPROVED, ₹2,800 | Network cashless + discount |
+| TC030 | Unknown member ID | REJECTED | MEMBER_NOT_COVERED |
 
 ```bash
 npx tsx scripts/run-tests.ts
@@ -323,7 +352,7 @@ The deterministic pipeline acts as both a fallback and a set of tools for the ag
 | Submit Claim | `/submit` | Upload documents or paste JSON to submit a new claim |
 | Claim Detail | `/claims/[id]` | Full explainability — amount waterfall, line items, agent reasoning, counterfactuals |
 | Policy Explorer | `/policy` | Natural language Q&A about the insurance policy (RAG-powered) |
-| Test Runner | `/test-runner` | Run and visualize all 10 rule-engine test cases |
+| Test Runner | `/test-runner` | Run and visualize all 30 rule-engine test cases |
 | Settings | `/settings` | Configure API keys at runtime |
 
 ---
@@ -371,6 +400,23 @@ src/
 **Confidence blending**: Final confidence = 60% rule engine clarity + 40% AI medical score. Below 70% triggers MANUAL_REVIEW regardless of the rule engine's decision.
 
 **Groq key rotation**: The system supports up to 3 Groq API keys (`GROQ_API_KEY`, `_2`, `_3`). On a 429 rate limit, it automatically rotates to the next key and retries. This effectively 3x's the free tier.
+
+---
+
+## Cloud Deployment
+
+The app is fully deployed on Vercel with all components in the cloud:
+
+| Component | Service | Details |
+|-----------|---------|---------|
+| App | Vercel | Next.js 16 serverless functions |
+| Database | Turso | Cloud SQLite with 30 seeded members |
+| LLM | Groq | LLaMA 3.3 70B (extraction, medical review, agentic orchestration) |
+| OCR Fallback | Google Gemini | 2.5 Flash Vision for handwritten/low-quality docs |
+| Embeddings | In-memory | MiniLM-L6-v2 loads on cold start (~5-10s first request) |
+| RAG | In-memory | Knowledge base rebuilt from source files per serverless instance |
+
+Environment variables on Vercel: `GROQ_API_KEY`, `GEMINI_API_KEY`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
 
 ---
 

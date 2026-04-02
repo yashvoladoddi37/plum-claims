@@ -9,6 +9,7 @@ interface KnowledgeChunk {
   source: string;
   category: string;
   textPreview: string;
+  text: string;
 }
 
 interface SearchResult {
@@ -54,6 +55,7 @@ export default function PolicyExplorer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchSourceFilter, setSearchSourceFilter] = useState<string>("all");
 
   // Q&A
   const [question, setQuestion] = useState("");
@@ -61,8 +63,9 @@ export default function PolicyExplorer() {
   const [asking, setAsking] = useState(false);
   const [qaHistory, setQaHistory] = useState<QAResult[]>([]);
 
-  // Filter
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  // Knowledge Base filter + expanded cards
+  const [kbFilter, setKbFilter] = useState<string>("all");
+  const [expandedChunks, setExpandedChunks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch("/api/rag")
@@ -83,7 +86,7 @@ export default function PolicyExplorer() {
       const res = await fetch("/api/rag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery, topK: 8, source: sourceFilter === "all" ? undefined : sourceFilter }),
+        body: JSON.stringify({ query: searchQuery, topK: 8, source: searchSourceFilter === "all" ? undefined : searchSourceFilter }),
       });
       const data = await res.json();
       setSearchResults(data.results || []);
@@ -109,7 +112,11 @@ export default function PolicyExplorer() {
     setAsking(false);
   }
 
-  const filteredChunks = sourceFilter === "all" ? chunks : chunks.filter(c => c.source === sourceFilter);
+  function toggleChunk(id: string) {
+    setExpandedChunks(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  const filteredChunks = kbFilter === "all" ? chunks : chunks.filter(c => c.source === kbFilter);
 
   return (
     <div className="space-y-6">
@@ -206,7 +213,7 @@ export default function PolicyExplorer() {
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSearch} className="flex gap-2">
-            <select className="border rounded px-3 py-2 text-sm" value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>
+            <select className="border rounded px-3 py-2 text-sm" value={searchSourceFilter} onChange={e => setSearchSourceFilter(e.target.value)}>
               <option value="all">All Sources</option>
               <option value="policy_terms">📋 Policy Terms</option>
               <option value="adjudication_rules">⚖️ Adjudication Rules</option>
@@ -246,29 +253,47 @@ export default function PolicyExplorer() {
             <CardTitle>📚 Knowledge Base</CardTitle>
             <div className="flex gap-1">
               {["all", "policy_terms", "adjudication_rules", "medical_knowledge"].map(s => (
-                <Button key={s} variant={sourceFilter === s ? "default" : "outline"} className="text-xs h-7 px-2"
-                  onClick={() => setSourceFilter(s)}>
+                <Button key={s} variant={kbFilter === s ? "default" : "outline"} className="text-xs h-7 px-2"
+                  onClick={() => setKbFilter(s)}>
                   {s === "all" ? "All" : s === "policy_terms" ? "📋 Policy" : s === "adjudication_rules" ? "⚖️ Rules" : "🏥 Medical"}
                 </Button>
               ))}
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">Click on any chunk to expand its full content. {filteredChunks.length} chunks shown.</p>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="animate-pulse bg-muted rounded h-12" />)}</div>
+          ) : filteredChunks.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p className="text-lg mb-1">No chunks found</p>
+              <p className="text-sm">No knowledge chunks available for this source filter.</p>
+            </div>
           ) : (
             <div className="space-y-2">
-              {filteredChunks.map((chunk) => (
-                <div key={chunk.id} className="p-3 rounded-lg border hover:bg-muted/30 transition-colors text-sm">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-xs text-muted-foreground">{chunk.id}</span>
-                    <Badge className={`text-xs ${SOURCE_COLORS[chunk.source] || ""}`}>{chunk.source}</Badge>
-                    <Badge variant="secondary" className="text-xs">{chunk.category}</Badge>
-                  </div>
-                  <p className="text-muted-foreground text-xs">{chunk.textPreview}</p>
-                </div>
-              ))}
+              {filteredChunks.map((chunk) => {
+                const isExpanded = expandedChunks[chunk.id] ?? false;
+                return (
+                  <button
+                    key={chunk.id}
+                    onClick={() => toggleChunk(chunk.id)}
+                    className="w-full text-left p-3 rounded-lg border hover:bg-muted/30 hover:shadow-sm transition-all text-sm"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-mono text-xs text-muted-foreground">{chunk.id}</span>
+                      <Badge className={`text-xs ${SOURCE_COLORS[chunk.source] || ""}`}>{chunk.source}</Badge>
+                      <Badge variant="secondary" className="text-xs">{chunk.category}</Badge>
+                      <span className="text-xs text-muted-foreground ml-auto">{isExpanded ? '▲' : '▼'}</span>
+                    </div>
+                    {isExpanded ? (
+                      <p className="text-sm leading-relaxed mt-2 whitespace-pre-wrap">{chunk.text}</p>
+                    ) : (
+                      <p className="text-muted-foreground text-xs truncate">{chunk.textPreview}</p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </CardContent>
