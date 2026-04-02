@@ -224,7 +224,7 @@ export default function PolicyExplorer() {
             <div className="space-y-3">
               <div className="p-4 rounded-lg bg-white border">
                 <div className="text-xs text-muted-foreground mb-2 font-medium">💬 Q: {qaResult.question}</div>
-                <p className="text-sm leading-relaxed">{qaResult.answer}</p>
+                <div className="text-sm leading-relaxed whitespace-pre-line">{renderMarkdown(qaResult.answer)}</div>
               </div>
               {qaResult.sources.length > 0 && (
                 <div>
