@@ -6,7 +6,7 @@
 // ============================================================
 
 import { generateText, tool, stepCountIs, zodSchema } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
+import { GROQ_MODEL, withGroqRotation } from './groq';
 import { z } from 'zod';
 
 import { checkEligibility } from '../engine/eligibility';
@@ -21,12 +21,6 @@ import { db } from '../db';
 import { members } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
-// Initialize Groq provider with API key
-function getGroqProvider() {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
-  return createGroq({ apiKey });
-}
 
 // ---- Tool Definitions ----
 // Each tool wraps an existing rule function, giving the LLM agent
@@ -277,28 +271,28 @@ export async function agenticAdjudicate(
   claimId: string = 'CLM_00000'
 ): Promise<AgentDecision> {
   const startTime = Date.now();
-  const groq = getGroqProvider();
   const tools = buildTools(claim, memberRecord, aiContext);
-
   const claimSummary = buildClaimSummary(claim);
 
-  const result = await generateText({
-    model: groq('llama-3.3-70b-versatile'),
-    system: SYSTEM_PROMPT,
-    prompt: `Process the following OPD insurance claim and make an adjudication decision:\n\n${claimSummary}`,
-    tools,
-    stopWhen: stepCountIs(15),
-    onStepFinish(event) {
-      // Log each step for observability
-      if (event.toolCalls && event.toolCalls.length > 0) {
-        for (const tc of event.toolCalls) {
-          console.log(`  🔧 Agent called: ${tc.toolName}(${JSON.stringify(tc.input).slice(0, 100)})`);
+  const result = await withGroqRotation(async (groq) => {
+    return await generateText({
+      model: groq(GROQ_MODEL),
+      system: SYSTEM_PROMPT,
+      prompt: `Process the following OPD insurance claim and make an adjudication decision:\n\n${claimSummary}`,
+      tools,
+      stopWhen: stepCountIs(15),
+      onStepFinish(event) {
+        // Log each step for observability
+        if (event.toolCalls && event.toolCalls.length > 0) {
+          for (const tc of event.toolCalls) {
+            console.log(`  🔧 Agent called: ${tc.toolName}(${JSON.stringify(tc.input).slice(0, 100)})`);
+          }
         }
-      }
-      if (event.text) {
-        console.log(`  💭 Agent reasoning: ${event.text.slice(0, 150)}...`);
-      }
-    },
+        if (event.text) {
+          console.log(`  💭 Agent reasoning: ${event.text.slice(0, 150)}...`);
+        }
+      },
+    });
   });
 
   // Extract the agent's reasoning chain from result.steps
