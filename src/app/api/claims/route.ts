@@ -3,7 +3,7 @@
 
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import '@/lib/db/seed';
+import { seedReady } from '@/lib/db/seed';
 import { claims, members } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { adjudicate } from '@/lib/engine/pipeline';
@@ -23,6 +23,7 @@ async function generateClaimId(): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    await seedReady;
     const contentType = request.headers.get('content-type') || '';
     let claimInput: ClaimInput;
     let documentFiles: { base64: string; mimeType: string }[] = [];
@@ -198,6 +199,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    await seedReady;
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
     const memberId = url.searchParams.get('member_id');

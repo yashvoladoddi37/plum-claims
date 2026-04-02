@@ -47,5 +47,7 @@ export async function seedMembers() {
   }
 }
 
-// Auto-seed on import
-seedMembers();
+// Auto-seed on import — store the promise so routes can await it
+export const seedReady = seedMembers().catch(err => {
+  console.warn('⚠️ Seed failed (DB may be unavailable):', err);
+});
