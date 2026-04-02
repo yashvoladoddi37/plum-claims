@@ -4,7 +4,7 @@ An AI-powered system that automates the adjudication (approval/rejection) of Out
 
 Built for Plum's AI Automation Engineer Assignment.
 
-**Live Demo:** [https://plum-claims.vercel.app](https://plum-claims.vercel.app)
+**Live Demo:** [https://plum-claims-production.up.railway.app](https://plum-claims-production.up.railway.app)
 
 ---
 
@@ -405,18 +405,18 @@ src/
 
 ## Cloud Deployment
 
-The app is fully deployed on Vercel with all components in the cloud:
+The app is deployed on Railway (chosen over Vercel because the agentic loop needs 15-30s per claim — Vercel's free tier has a 10s timeout on serverless functions).
 
 | Component | Service | Details |
 |-----------|---------|---------|
-| App | Vercel | Next.js 16 serverless functions |
+| App | Railway | Next.js 16, persistent Node.js process (no timeout limits) |
 | Database | Turso | Cloud SQLite with 30 seeded members |
 | LLM | Groq | LLaMA 3.3 70B (extraction, medical review, agentic orchestration) |
 | OCR Fallback | Google Gemini | 2.5 Flash Vision for handwritten/low-quality docs |
 | Embeddings | In-memory | MiniLM-L6-v2 loads on cold start (~5-10s first request) |
-| RAG | In-memory | Knowledge base rebuilt from source files per serverless instance |
+| RAG | In-memory | Knowledge base rebuilt from source files on startup |
 
-Environment variables on Vercel: `GROQ_API_KEY`, `GEMINI_API_KEY`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
+Environment variables on Railway: `GROQ_API_KEY`, `GROQ_MODEL`, `GEMINI_API_KEY`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
 
 ---
 
