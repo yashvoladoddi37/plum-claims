@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { seedReady } from '@/lib/db/seed';
 import { claims, members } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { adjudicate } from '@/lib/engine/pipeline';
 import { ClaimInput, Member, AIContext } from '@/lib/types';
 import { extractFromDocuments, runMedicalReview } from '@/lib/ai/extract';
@@ -218,5 +218,16 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Claims list error:', error);
     return Response.json({ error: 'Failed to fetch claims' }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  try {
+    await seedReady;
+    await db.run(sql`DELETE FROM ${claims}`);
+    return Response.json({ success: true, message: 'All claims deleted' });
+  } catch (error) {
+    console.error('Claims reset error:', error);
+    return Response.json({ error: 'Failed to reset claims' }, { status: 500 });
   }
 }
