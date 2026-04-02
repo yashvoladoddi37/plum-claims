@@ -27,6 +27,10 @@ import { eq } from 'drizzle-orm';
 // the ability to invoke them autonomously.
 
 function buildTools(claim: ClaimInput, memberRecord: Member | null, aiContext?: AIContext) {
+  // Shared state: coverage step can store its approved amount so limits step
+  // automatically picks it up — avoids relying on LLM to pass it correctly.
+  const sharedState = { coverageApprovedAmount: undefined as number | undefined };
+
   return {
     check_eligibility: tool({
       description:
@@ -79,6 +83,10 @@ function buildTools(claim: ClaimInput, memberRecord: Member | null, aiContext?: 
       })),
       execute: async (): Promise<Record<string, unknown>> => {
         const result = checkCoverage(claim);
+        // Store approved amount so limits step can use it automatically
+        if (result.adjustments?.approved_amount !== undefined) {
+          sharedState.coverageApprovedAmount = result.adjustments.approved_amount;
+        }
         return {
           step: result.step,
           passed: result.passed,
@@ -101,7 +109,9 @@ function buildTools(claim: ClaimInput, memberRecord: Member | null, aiContext?: 
         adjusted_amount: z.number().optional().describe('Amount adjusted by coverage step (for partial approvals)'),
       })),
       execute: async ({ adjusted_amount }: { adjusted_amount?: number }): Promise<Record<string, unknown>> => {
-        const result = calculateLimits(claim, { ytdApprovedAmount: 0 }, adjusted_amount);
+        // Use shared state from coverage step if LLM didn't pass the adjusted amount
+        const effectiveAmount = adjusted_amount ?? sharedState.coverageApprovedAmount;
+        const result = calculateLimits(claim, { ytdApprovedAmount: 0 }, effectiveAmount);
         return {
           step: result.step,
           passed: result.passed,
