@@ -123,22 +123,36 @@ export async function groqGenerate(prompt: string, options?: { temperature?: num
  * Generate structured JSON using Groq/Llama.
  * Wraps the prompt with JSON-output instructions and parses the response.
  */
+/** Fix invalid escape sequences that LLMs sometimes produce in JSON */
+function sanitizeJsonString(raw: string): string {
+  // Fix invalid escapes like \: \' \/ etc. — only \", \\, \/, \b, \f, \n, \r, \t, \uXXXX are valid
+  return raw.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+}
+
+function tryParseJson<T>(raw: string): T {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return JSON.parse(sanitizeJsonString(raw));
+  }
+}
+
 export async function groqGenerateJSON<T = Record<string, unknown>>(prompt: string, options?: { temperature?: number }): Promise<T> {
   const wrappedPrompt = `${prompt}\n\nIMPORTANT: Respond with ONLY valid JSON. No markdown, no code blocks, no explanation — just the JSON object.`;
   const text = await groqGenerate(wrappedPrompt, { temperature: options?.temperature ?? 0.1, maxOutputTokens: 4096 });
 
   // Try direct parse first, then try extracting from code blocks
   try {
-    return JSON.parse(text);
+    return tryParseJson<T>(text);
   } catch {
     const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[1]);
+      return tryParseJson<T>(jsonMatch[1]);
     }
     // Try to find the first { ... } block
     const braceMatch = text.match(/\{[\s\S]*\}/);
     if (braceMatch) {
-      return JSON.parse(braceMatch[0]);
+      return tryParseJson<T>(braceMatch[0]);
     }
     throw new Error(`Failed to parse JSON from Groq response: ${text.slice(0, 200)}`);
   }
