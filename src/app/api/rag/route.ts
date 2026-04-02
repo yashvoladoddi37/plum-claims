@@ -2,12 +2,13 @@
 // POST /api/rag — Query the knowledge base (search)
 
 import { NextRequest } from 'next/server';
-import { getKnowledgeBaseStats, retrieveContext, formatRetrievedContext } from '@/lib/ai/rag';
+import { getKnowledgeBaseStats, retrieveContext, formatRetrievedContext, initializeKnowledgeBase } from '@/lib/ai/rag';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await initializeKnowledgeBase();
     const stats = getKnowledgeBaseStats();
     return Response.json(stats);
   } catch (error) {

@@ -32,7 +32,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground font-mono hidden sm:inline">Gemini AI + RAG</span>
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="AI Active" />
               </div>
             </div>
@@ -44,7 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <footer className="border-t py-4 mt-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs text-muted-foreground">
             <span>Plum OPD Claims Adjudication — AI Automation Engineer Assignment</span>
-            <span>Built with Next.js 16 + Gemini AI + RAG</span>
+            <span>Built with Next.js 16 + Groq AI + RAG</span>
           </div>
         </footer>
       </body>
