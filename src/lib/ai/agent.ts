@@ -280,6 +280,7 @@ export async function agenticAdjudicate(
       system: SYSTEM_PROMPT,
       prompt: `Process the following OPD insurance claim and make an adjudication decision:\n\n${claimSummary}`,
       tools,
+      maxRetries: 0, // Disable SDK retry — our rotation handles retries across keys
       stopWhen: stepCountIs(15),
       onStepFinish(event) {
         // Log each step for observability

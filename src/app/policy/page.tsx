@@ -39,39 +39,31 @@ const SOURCE_ICONS: Record<string, string> = {
 
 /** Render simple markdown (bold, code, backticks) as inline HTML */
 function renderMarkdown(text: string) {
-  // Split by markdown patterns and render inline
   const parts: React.ReactNode[] = [];
-  let remaining = text;
   let key = 0;
 
-  // Process **bold**, `code`, and ```code blocks```
   const regex = /\*\*(.+?)\*\*|`{3}([\s\S]*?)`{3}|`(.+?)`/g;
   let lastIndex = 0;
   let match;
 
-  while ((match = regex.exec(remaining)) !== null) {
-    // Add text before match
+  while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(remaining.slice(lastIndex, match.index));
+      parts.push(text.slice(lastIndex, match.index));
     }
 
     if (match[1]) {
-      // **bold**
       parts.push(<strong key={key++}>{match[1]}</strong>);
     } else if (match[2]) {
-      // ```code block```
       parts.push(<code key={key++} className="block bg-muted px-3 py-2 rounded text-xs font-mono my-1 whitespace-pre-wrap">{match[2].trim()}</code>);
     } else if (match[3]) {
-      // `inline code`
       parts.push(<code key={key++} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{match[3]}</code>);
     }
 
     lastIndex = match.index + match[0].length;
   }
 
-  // Add remaining text
-  if (lastIndex < remaining.length) {
-    parts.push(remaining.slice(lastIndex));
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
   }
 
   return parts.length > 0 ? parts : [text];
@@ -146,9 +138,16 @@ export default function PolicyExplorer() {
         body: JSON.stringify({ question: finalQ }),
       });
       const data = await res.json();
-      setQaResult(data);
-      setQaHistory(prev => [data, ...prev]);
-    } catch { /* */ }
+      if (data.error || !data.answer) {
+        setQaResult({ question: finalQ, answer: data.error || 'Something went wrong — please try again.', sources: [] });
+      } else {
+        const safe = { ...data, sources: data.sources || [] };
+        setQaResult(safe);
+        setQaHistory(prev => [safe, ...prev]);
+      }
+    } catch {
+      setQaResult({ question: finalQ, answer: 'Network error — the server may be busy. Please try again in a moment.', sources: [] });
+    }
     setAsking(false);
   }
 
@@ -159,96 +158,114 @@ export default function PolicyExplorer() {
   const filteredChunks = kbFilter === "all" ? chunks : chunks.filter(c => c.source === kbFilter);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Policy Explorer</h1>
-        <p className="text-muted-foreground text-sm mt-1">Browse the RAG knowledge base, search policy terms, or ask natural language questions</p>
+    <div className="space-y-8">
+      {/* Header — centered */}
+      <div className="text-center pt-4">
+        <h1 className="text-3xl font-bold tracking-tight">Policy Explorer</h1>
+        <p className="text-muted-foreground text-sm mt-2 max-w-lg mx-auto">
+          Browse the RAG knowledge base, search policy terms, or ask natural language questions
+        </p>
       </div>
 
-      {/* Stats */}
+      {/* Stats — centered row */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-4xl mx-auto">
           <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Total Chunks</CardTitle></CardHeader>
-            <CardContent><div className="text-3xl font-bold">{stats.totalChunks}</div></CardContent>
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Chunks</div>
+              <div className="text-3xl font-bold">{stats.totalChunks}</div>
+            </CardContent>
           </Card>
           <Card className="border-l-4 border-l-blue-400">
-            <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">📋 Policy Terms</CardTitle></CardHeader>
-            <CardContent><div className="text-3xl font-bold">{stats.bySource.policy_terms || 0}</div></CardContent>
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">📋 Policy Terms</div>
+              <div className="text-3xl font-bold">{stats.bySource.policy_terms || 0}</div>
+            </CardContent>
           </Card>
           <Card className="border-l-4 border-l-violet-400">
-            <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">⚖️ Rules</CardTitle></CardHeader>
-            <CardContent><div className="text-3xl font-bold">{stats.bySource.adjudication_rules || 0}</div></CardContent>
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">⚖️ Rules</div>
+              <div className="text-3xl font-bold">{stats.bySource.adjudication_rules || 0}</div>
+            </CardContent>
           </Card>
           <Card className="border-l-4 border-l-emerald-400">
-            <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">🏥 Medical</CardTitle></CardHeader>
-            <CardContent><div className="text-3xl font-bold">{stats.bySource.medical_knowledge || 0}</div></CardContent>
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">🏥 Medical</div>
+              <div className="text-3xl font-bold">{stats.bySource.medical_knowledge || 0}</div>
+            </CardContent>
           </Card>
           <Card className="border-l-4 border-l-purple-400">
-            <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Embeddings</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold">{stats.embeddingsLoaded ? "✅ Active" : "⚠️ Keywords"}</div></CardContent>
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Embeddings</div>
+              <div className="text-2xl font-bold">{stats.embeddingsLoaded ? "✅ Active" : "⚠️ Keywords"}</div>
+            </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Q&A Section */}
-      <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">🤖 Ask About Your Policy</CardTitle>
-          <p className="text-xs text-muted-foreground">Ask questions in natural language — the AI will answer using the RAG knowledge base</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Sample questions */}
-          <div className="flex flex-wrap gap-2">
-            {SAMPLE_QUESTIONS.map((q, i) => (
-              <button key={i} onClick={() => handleAsk(q)}
-                className="text-xs px-3 py-1.5 rounded-full border bg-white hover:bg-purple-50 hover:border-purple-300 transition-all">
-                {q}
-              </button>
-            ))}
-          </div>
+      {/* ====== ASK ABOUT YOUR POLICY — Hero Section ====== */}
+      <div className="max-w-3xl mx-auto">
+        <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50/80 to-blue-50/80 shadow-lg">
+          <CardContent className="pt-8 pb-8 px-8">
+            <div className="text-center space-y-4">
+              <div className="text-4xl">🤖</div>
+              <h2 className="text-2xl font-bold tracking-tight">Ask About Your Policy</h2>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                Ask questions in natural language — the AI will answer using the RAG knowledge base
+              </p>
 
-          {/* Input */}
-          <form onSubmit={(e) => { e.preventDefault(); handleAsk(); }} className="flex gap-2">
-            <input className="flex-1 border rounded-lg px-4 py-2 text-sm" type="text"
-              value={question} onChange={e => setQuestion(e.target.value)}
-              placeholder="Ask anything about your insurance policy..." />
-            <Button type="submit" disabled={asking || !question.trim()}>
-              {asking ? "Thinking..." : "Ask"}
-            </Button>
-          </form>
-
-          {/* Answer */}
-          {qaResult && (
-            <div className="space-y-3">
-              <div className="p-4 rounded-lg bg-white border">
-                <div className="text-xs text-muted-foreground mb-2 font-medium">💬 Q: {qaResult.question}</div>
-                <div className="text-sm leading-relaxed whitespace-pre-line">{renderMarkdown(qaResult.answer)}</div>
+              {/* Sample questions — centered */}
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                {SAMPLE_QUESTIONS.map((q, i) => (
+                  <button key={i} onClick={() => handleAsk(q)}
+                    className="text-xs px-3 py-1.5 rounded-full border bg-white/80 hover:bg-purple-50 hover:border-purple-300 transition-all shadow-sm">
+                    {q}
+                  </button>
+                ))}
               </div>
-              {qaResult.sources.length > 0 && (
-                <div>
-                  <div className="text-xs text-muted-foreground mb-2">Sources used:</div>
-                  <div className="space-y-1">
-                    {qaResult.sources.slice(0, 3).map((s, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-muted/50">
-                        <Badge className={`text-xs ${SOURCE_COLORS[s.source] || ""}`}>{s.source}</Badge>
-                        <span className="text-muted-foreground truncate flex-1">{s.text.slice(0, 100)}...</span>
-                        <span className="font-mono text-muted-foreground">{(s.similarity * 100).toFixed(0)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
+              {/* Input — centered */}
+              <form onSubmit={(e) => { e.preventDefault(); handleAsk(); }} className="flex gap-2 max-w-xl mx-auto pt-2">
+                <input className="flex-1 border rounded-lg px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-300" type="text"
+                  value={question} onChange={e => setQuestion(e.target.value)}
+                  placeholder="Ask anything about your insurance policy..." />
+                <Button type="submit" disabled={asking || !question.trim()} className="px-6">
+                  {asking ? "Thinking..." : "Ask"}
+                </Button>
+              </form>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Answer */}
+            {qaResult && (
+              <div className="space-y-3 mt-6">
+                <div className="p-5 rounded-xl bg-white border shadow-sm">
+                  <div className="text-xs text-muted-foreground mb-2 font-medium text-center">💬 {qaResult.question}</div>
+                  <div className="text-sm leading-relaxed whitespace-pre-line">{renderMarkdown(qaResult.answer)}</div>
+                </div>
+                {qaResult.sources?.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-2 text-center">Sources used</div>
+                    <div className="space-y-1">
+                      {qaResult.sources.slice(0, 3).map((s, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-white/60 border">
+                          <Badge className={`text-xs ${SOURCE_COLORS[s.source] || ""}`}>{s.source}</Badge>
+                          <span className="text-muted-foreground truncate flex-1">{s.text.slice(0, 100)}...</span>
+                          <span className="font-mono text-muted-foreground">{(s.similarity * 100).toFixed(0)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Semantic Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">🔍 Semantic Search</CardTitle>
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">🔍 Semantic Search</CardTitle>
           <p className="text-xs text-muted-foreground">Find relevant policy sections using semantic similarity</p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -287,7 +304,7 @@ export default function PolicyExplorer() {
       </Card>
 
       {/* Knowledge Base Browser */}
-      <Card>
+      <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>📚 Knowledge Base</CardTitle>
@@ -341,8 +358,8 @@ export default function PolicyExplorer() {
 
       {/* Q&A History */}
       {qaHistory.length > 1 && (
-        <Card>
-          <CardHeader><CardTitle className="text-sm">💬 Previous Questions</CardTitle></CardHeader>
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader><CardTitle className="text-sm text-center">💬 Previous Questions</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {qaHistory.slice(1).map((qa, i) => (
               <div key={i} className="p-3 rounded-lg bg-muted/30 border text-sm">

@@ -52,30 +52,37 @@ export async function withGroqRotation<T>(
   operation: (provider: ReturnType<typeof createGroq>) => Promise<T>
 ): Promise<T> {
   const keys = getApiKeys();
-  let attempts = 0;
-  const maxAttempts = Math.min(keys.length, 2); // Retry at most once if we have multiple keys
+  const maxAttempts = keys.length; // Try every available key
 
-  while (attempts < maxAttempts) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       const provider = getGroqProvider();
       return await operation(provider);
     } catch (error: any) {
-      // Check for rate limit error (429)
-      const isRateLimit = 
-        error?.status === 429 || 
-        error?.message?.includes('429') || 
-        error?.message?.includes('rate limit');
+      const msg = (error?.message || '').toLowerCase();
+      const status = error?.status || error?.statusCode;
+      // Catch rate limits (429), quota exceeded, and resource exhausted errors
+      const isRetryable =
+        status === 429 ||
+        status === 413 ||
+        msg.includes('429') ||
+        msg.includes('rate limit') ||
+        msg.includes('rate_limit') ||
+        msg.includes('quota') ||
+        msg.includes('exceeded') ||
+        msg.includes('resource_exhausted') ||
+        msg.includes('tokens per') ||
+        msg.includes('requests per');
 
-      if (isRateLimit && attempts < maxAttempts - 1) {
-        console.warn(`⚠️ Groq Rate Limit reached (attempt ${attempts + 1}). Rotating key...`);
+      if (isRetryable && attempt < maxAttempts - 1) {
+        console.warn(`⚠️ Groq limit hit (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Rotating key...`);
         rotateGroqKey();
-        attempts++;
         continue;
       }
       throw error;
     }
   }
-  throw new Error('Groq rotation failed after multiple attempts');
+  throw new Error('Groq rotation failed — all API keys exhausted');
 }
 
 /**
@@ -89,6 +96,7 @@ export async function groqGenerate(prompt: string, options?: { temperature?: num
       prompt,
       temperature: options?.temperature ?? 0.2,
       maxOutputTokens: options?.maxOutputTokens ?? 2048,
+      maxRetries: 0, // Disable SDK retry — our rotation handles retries across keys
     });
     return result.text;
   });

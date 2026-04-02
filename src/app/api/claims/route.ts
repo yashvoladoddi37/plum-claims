@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
       // If AI is available and we have files, extract data
       if (isGroqAvailable() && documentFiles.length > 0) {
         aiExtraction = await extractFromDocuments(documentFiles);
-        // Build claim input from AI extraction
+        // Build claim input from AI extraction, falling back to form fields
         const ext = aiExtraction.extraction;
         claimInput = {
-          member_id: memberId,
-          member_name: memberName,
+          member_id: memberId || ext.employee_id || ext.member_id || `WALK_IN_${Date.now()}`,
+          member_name: memberName || ext.patient_name || 'Unknown',
           treatment_date: ext.treatment_date || treatmentDate,
           claim_amount: ext.total_amount || claimAmount,
           hospital: hospital || ext.doctor?.clinic_hospital || undefined,
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       } else {
         // No AI — use form data directly
         claimInput = {
-          member_id: memberId,
-          member_name: memberName,
+          member_id: memberId || `WALK_IN_${Date.now()}`,
+          member_name: memberName || 'Unknown',
           treatment_date: treatmentDate,
           claim_amount: claimAmount,
           hospital: hospital || undefined,
@@ -149,6 +149,10 @@ export async function POST(request: NextRequest) {
 
     // Generate explainability data
     const explanation = generateExplanation(decision, claimInput, aiContext);
+
+    // Ensure member_id is never null for DB constraint
+    if (!claimInput.member_id) claimInput.member_id = `WALK_IN_${Date.now()}`;
+    if (!claimInput.member_name) claimInput.member_name = 'Unknown';
 
     // Store claim
     const now = new Date().toISOString();

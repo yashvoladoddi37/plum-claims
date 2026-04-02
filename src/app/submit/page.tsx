@@ -55,33 +55,21 @@ export default function SubmitClaim() {
   const [result, setResult] = useState<Record<string, any> | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>({});
-
-  // Form fields
-  const [memberId, setMemberId] = useState("EMP001");
-  const [memberName, setMemberName] = useState("Rajesh Kumar");
-  const [treatmentDate, setTreatmentDate] = useState("2024-11-15");
-  const [claimAmount, setClaimAmount] = useState("1500");
-  const [hospital, setHospital] = useState("");
-  const [cashless, setCashless] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
+  const [dragActive, setDragActive] = useState(false);
 
   function toggleAgent(step: string) {
     setExpandedAgents(prev => ({ ...prev, [step]: !prev[step] }));
   }
 
-  async function handleFormSubmit(e: React.FormEvent) {
+  async function handleDocSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (files.length === 0) return;
     setLoading(true);
     setResult(null);
     setExpandedAgents({});
     try {
       const formData = new FormData();
-      formData.append("member_id", memberId);
-      formData.append("member_name", memberName);
-      formData.append("treatment_date", treatmentDate);
-      formData.append("claim_amount", claimAmount);
-      if (hospital) formData.append("hospital", hospital);
-      formData.append("cashless_request", String(cashless));
       for (const file of files) formData.append("documents", file);
 
       const res = await fetch("/api/claims", { method: "POST", body: formData });
@@ -110,6 +98,19 @@ export default function SubmitClaim() {
     } finally { setLoading(false); }
   }
 
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      f => f.type.startsWith("image/") || f.type === "application/pdf"
+    );
+    if (droppedFiles.length > 0) setFiles(prev => [...prev, ...droppedFiles]);
+  }
+
+  function removeFile(index: number) {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  }
+
   // Extract data from result
   const status = result?.status as string | undefined;
   const decision = result?.decision;
@@ -120,37 +121,74 @@ export default function SubmitClaim() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold">Submit New Claim</h1>
+      <div className="text-center pt-4">
+        <h1 className="text-2xl font-bold tracking-tight">Submit New Claim</h1>
+        <p className="text-muted-foreground text-sm mt-1">Upload documents or paste JSON — claim details are extracted automatically</p>
+      </div>
 
-      <Tabs defaultValue="form">
+      <Tabs defaultValue="documents">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="form">📋 Form + Documents</TabsTrigger>
+          <TabsTrigger value="documents">📄 Upload Documents</TabsTrigger>
           <TabsTrigger value="json">🔧 JSON Input</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="form">
+        <TabsContent value="documents">
           <Card>
-            <CardHeader><CardTitle>Claim Details</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Member ID</Label><Input value={memberId} onChange={(e) => setMemberId(e.target.value)} /></div>
-                  <div><Label>Member Name</Label><Input value={memberName} onChange={(e) => setMemberName(e.target.value)} /></div>
-                  <div><Label>Treatment Date</Label><Input type="date" value={treatmentDate} onChange={(e) => setTreatmentDate(e.target.value)} /></div>
-                  <div><Label>Claim Amount (₹)</Label><Input type="number" value={claimAmount} onChange={(e) => setClaimAmount(e.target.value)} /></div>
-                  <div><Label>Hospital</Label><Input value={hospital} onChange={(e) => setHospital(e.target.value)} placeholder="Optional" /></div>
-                  <div className="flex items-end gap-2">
-                    <input type="checkbox" id="cashless" checked={cashless} onChange={(e) => setCashless(e.target.checked)} />
-                    <Label htmlFor="cashless">Cashless Request</Label>
+            <CardContent className="pt-6">
+              <form onSubmit={handleDocSubmit} className="space-y-5">
+                {/* Drag & Drop Zone */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={handleDrop}
+                  className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer
+                    ${dragActive ? "border-primary bg-primary/5 scale-[1.01]" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"}`}
+                  onClick={() => document.getElementById("file-input")?.click()}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="text-4xl">📎</div>
+                    <div>
+                      <p className="font-semibold text-sm">Drop your bills, prescriptions, or medical documents here</p>
+                      <p className="text-xs text-muted-foreground mt-1">Supports images (JPG, PNG) and PDFs — claim details will be extracted automatically</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="mt-1">
+                      Browse Files
+                    </Button>
                   </div>
+                  <Input
+                    id="file-input"
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf"
+                    onChange={(e) => setFiles(prev => [...prev, ...Array.from(e.target.files || [])])}
+                    className="hidden"
+                  />
                 </div>
-                <div>
-                  <Label>Upload Documents (Images/PDFs)</Label>
-                  <Input type="file" multiple accept="image/*,.pdf" onChange={(e) => setFiles(Array.from(e.target.files || []))} className="mt-1" />
-                  {files.length > 0 && <p className="text-sm text-muted-foreground mt-1">{files.length} file(s) selected</p>}
-                </div>
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? "Processing..." : "Submit Claim"}
+
+                {/* File List */}
+                {files.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">{files.length} document{files.length > 1 ? "s" : ""} selected</Label>
+                    <div className="space-y-1.5">
+                      {files.map((file, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border bg-muted/20 text-sm">
+                          <span className="text-lg">{file.type === "application/pdf" ? "📑" : "🖼️"}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                          <button type="button" onClick={() => removeFile(i)}
+                            className="text-muted-foreground hover:text-red-500 transition-colors text-xs px-2 py-1 rounded hover:bg-red-50">
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button type="submit" disabled={loading || files.length === 0} className="w-full h-11 text-base">
+                  {loading ? "Processing Documents..." : "Submit Claim"}
                 </Button>
               </form>
             </CardContent>
@@ -206,7 +244,7 @@ export default function SubmitClaim() {
               </div>
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">Claimed</div>
-                <div className="text-2xl font-bold font-mono">₹{Number(claimAmount).toLocaleString()}</div>
+                <div className="text-2xl font-bold font-mono">₹{Number(result.claim_amount || 0).toLocaleString()}</div>
                 {decision?.approved_amount != null && Number(decision.approved_amount) > 0 && (
                   <div className="text-lg font-semibold text-emerald-700 mt-1">Approved: ₹{Number(decision.approved_amount).toLocaleString()}</div>
                 )}

@@ -34,6 +34,7 @@ Return a JSON object with these fields:
 {
   "documents_detected": [{ "document_type": "prescription|bill|diagnostic_report|pharmacy_bill", "confidence": 0.0-1.0 }],
   "patient_name": "string or null",
+  "employee_id": "string or null (e.g. EMP001, EMP003 — look for Employee ID, Member ID, or similar)",
   "treatment_date": "YYYY-MM-DD or null",
   "doctor": { "name": "string or null", "registration_number": "string or null", "qualification": "string or null", "clinic_hospital": "string or null" },
   "diagnosis": "string or null",
