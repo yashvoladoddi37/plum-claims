@@ -247,8 +247,9 @@ function buildAmountWaterfall(decision: Decision, claim: ClaimInput): DecisionEx
   waterfall.push({ label: 'Claimed Amount', amount: claim.claim_amount, type: 'start' });
 
   const coverageStep = decision.steps.find(s => s.step === 'Coverage Check');
+  const coverageApproved = coverageStep?.adjustments?.approved_amount as number | undefined;
   if (coverageStep?.adjustments?.rejected_items) {
-    const excluded = claim.claim_amount - (coverageStep.adjustments.approved_amount ?? claim.claim_amount);
+    const excluded = claim.claim_amount - (coverageApproved ?? claim.claim_amount);
     if (excluded > 0) {
       waterfall.push({ label: 'Excluded Items', amount: -excluded, type: 'deduction' });
     }
@@ -264,7 +265,14 @@ function buildAmountWaterfall(decision: Decision, claim: ClaimInput): DecisionEx
     }
   }
 
-  waterfall.push({ label: 'Approved Amount', amount: decision.approved_amount, type: 'total' });
+  // Use the decision's approved_amount, but if it's 0 and coverage approved something,
+  // use the coverage-derived amount (handles cases where agent set wrong amount)
+  let finalApproved = decision.approved_amount;
+  if (finalApproved === 0 && coverageApproved && coverageApproved > 0 && decision.decision !== 'REJECTED') {
+    finalApproved = coverageApproved;
+  }
+
+  waterfall.push({ label: 'Approved Amount', amount: finalApproved, type: 'total' });
 
   return waterfall;
 }

@@ -355,10 +355,62 @@ export async function agenticAdjudicate(
     notes = args.reasoning as string;
     nextSteps = args.next_steps as string;
   } else {
-    // Agent didn't call make_decision — extract from final text or default to MANUAL_REVIEW
     notes = finalText || 'Agent did not produce a structured decision. Flagged for manual review.';
     nextSteps = 'Claim will be reviewed by a human adjudicator.';
   }
+
+  // ---- Post-processing: reconcile agent decision with tool results ----
+  // The LLM sometimes gets the decision/amount wrong. Use the deterministic
+  // pipeline steps as ground truth to correct inconsistencies.
+
+  const eligStep = pipelineSteps.find(s => s.step === 'Eligibility Check');
+  const coverageStep = pipelineSteps.find(s => s.step === 'Coverage Check');
+  const fraudStep = pipelineSteps.find(s => s.step === 'Fraud Detection');
+  const medicalStep = pipelineSteps.find(s => s.step === 'AI Medical Review');
+
+  // Derive the correct decision from pipeline steps using priority rules
+  const hasReject = pipelineSteps.some(s => s.decision_impact === 'REJECT');
+  const hasPartial = pipelineSteps.some(s => s.decision_impact === 'PARTIAL');
+  const hasFraudReview = fraudStep && !fraudStep.passed;
+  const hasMedicalReview = medicalStep && !medicalStep.passed;
+
+  // Compute correct approved amount from coverage step
+  const coverageApproved = coverageStep?.adjustments?.approved_amount as number | undefined;
+
+  if (hasReject && !hasPartial) {
+    // Hard reject — eligibility failed, service not covered, etc.
+    decision = 'REJECTED';
+    approvedAmount = 0;
+  } else if (hasPartial) {
+    // Partial — some items excluded but others approved
+    decision = 'PARTIAL';
+    if (coverageApproved !== undefined && coverageApproved > 0) {
+      approvedAmount = coverageApproved;
+    }
+  } else if (hasFraudReview || hasMedicalReview) {
+    decision = 'MANUAL_REVIEW';
+  } else if (!hasReject) {
+    // All passed
+    decision = 'APPROVED';
+    if (approvedAmount === 0) {
+      approvedAmount = coverageApproved ?? claim.claim_amount;
+    }
+  }
+
+  // If eligibility fails because member not found but other checks passed,
+  // don't override a PARTIAL that the coverage agent correctly identified —
+  // the eligibility failure is noted but coverage analysis is still valid.
+  if (eligStep && !eligStep.passed && hasPartial && coverageApproved && coverageApproved > 0) {
+    decision = 'PARTIAL';
+    approvedAmount = coverageApproved;
+    // Keep the eligibility rejection reason but add coverage ones too
+    if (!rejectionReasons.includes('MEMBER_NOT_COVERED' as RejectionReason)) {
+      rejectionReasons.push('MEMBER_NOT_COVERED' as RejectionReason);
+    }
+  }
+
+  // Ensure approved amount is never negative
+  if (approvedAmount < 0) approvedAmount = 0;
 
   const processingTime = Date.now() - startTime;
 
