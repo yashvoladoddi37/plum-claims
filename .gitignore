@@ -37,6 +37,15 @@ yarn-error.log*
 data/*.db
 data/*.db-shm
 data/*.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# tesseract trained data (downloaded at runtime)
+eng.traineddata
+
+# misc logs
+excalidraw.log
 
 # augment
 .augment/

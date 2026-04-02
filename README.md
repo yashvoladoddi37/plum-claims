@@ -1,209 +1,184 @@
 # Plum OPD Claim Adjudication System
 
-An AI-powered system that automates the adjudication (approval/rejection) of Outpatient Department (OPD) insurance claims. Built for Plum's AI Automation Engineer Assignment.
+An AI-powered system that automates the adjudication (approval/rejection) of Outpatient Department (OPD) insurance claims. An LLM agent decides what checks to run, queries a policy knowledge base, and synthesizes a final decision — with full explainability and a human-in-the-loop review interface.
+
+Built for Plum's AI Automation Engineer Assignment.
+
+---
+
+## How It Works
+
+A claim comes in (via document upload or structured JSON). The system:
+
+1. **Extracts data** from uploaded medical documents (prescriptions, bills, reports) using OCR
+2. **Structures it** into a standard format using an LLM
+3. **Retrieves** relevant policy sections from a RAG knowledge base
+4. **Runs an AI agent** that autonomously decides which checks to perform and in what order
+5. **Produces a decision** with confidence score, line-item breakdown, and natural language explanation
+
+The agent isn't a fixed pipeline — it reasons about each claim individually, calling tools as needed and stopping early when it finds a rejection reason.
+
+---
 
 ## Architecture
 
 ```
-                                    CLAIM SUBMISSION
-                                          |
-                          +---------------+---------------+
-                          |                               |
-                    Form + File Upload              JSON Input
-                          |                               |
-                          v                               |
-               +--------------------+                     |
-               | Gemini Vision API  |                     |
-               | (Multimodal LLM)   |                     |
-               |                    |                     |
-               | - Document parsing |                     |
-               | - Data extraction  |                     |
-               | - Structured JSON  |                     |
-               +--------+-----------+                     |
-                        |                                 |
-                        +-----------> ClaimInput <--------+
-                                          |
-                                          v
-                            +---------------------------+
-                            |   RAG Knowledge Base      |
-                            |   (Gemini Embeddings)     |
-                            |                           |
-                            | - policy_terms.json       |
-                            | - adjudication_rules.md   |
-                            | - Medical knowledge       |
-                            | - Cosine similarity       |
-                            +-------------+-------------+
-                                          |
-                        Retrieved context |
-                                          v
-              +---------------------------------------------------+
-              |            ADJUDICATION PIPELINE                  |
-              |                                                   |
-              |  Step 1: Eligibility Check                        |
-              |    - Policy active? Member covered?               |
-              |    - Waiting period satisfied?                    |
-              |    - Specific ailment waiting (diabetes, etc.)    |
-              |                        |                          |
-              |  Step 2: Document Validation                      |
-              |    - Prescription present?                        |
-              |    - Doctor registration format valid?            |
-              |    - Diagnosis present?                           |
-              |                        |                          |
-              |  Step 3: Coverage Verification                    |
-              |    - Exclusion matching (cosmetic, weight loss)   |
-              |    - Partial coverage (per-procedure)             |
-              |    - Pre-authorization check (MRI, CT)            |
-              |                        |                          |
-              |  Step 4: Limits Calculation                       |
-              |    - Per-claim limit (category-aware)             |
-              |    - Annual limit (YTD tracking)                  |
-              |    - Network discount (20%)                       |
-              |    - Co-pay deduction (10%)                       |
-              |                        |                          |
-              |  Step 5: Fraud Detection                          |
-              |    - Same-day claim frequency                     |
-              |    - High-value threshold (>25K)                  |
-              |    - Limit boundary patterns                      |
-              |                        |                          |
-              |  Step 6: AI Medical Necessity Review              |
-              |    - Gemini LLM with RAG context                  |
-              |    - Diagnosis-treatment alignment                |
-              |    - Medical necessity scoring (0-1)              |
-              |                                                   |
-              +-------------------------+-------------------------+
-                                        |
-                                        v
-              +---------------------------------------------------+
-              |              DECISION SYNTHESIS                   |
-              |                                                   |
-              |  Priority: Fraud > Reject > Partial > Approve     |
-              |  Confidence: 60% rule engine + 40% AI score       |
-              |  Low confidence (<70%) -> MANUAL_REVIEW            |
-              +-------------------------+-------------------------+
-                                        |
-                                        v
-              +---------------------------------------------------+
-              |            EXPLAINABILITY ENGINE                  |
-              |                                                   |
-              |  - Natural language summary                       |
-              |  - Amount waterfall (claim -> deductions -> net)  |
-              |  - Line item visual diff                          |
-              |  - Counterfactual scenarios ("What if...")         |
-              |  - Confidence breakdown (rule vs. AI)             |
-              |  - Policy section references                      |
-              +-------------------------+-------------------------+
-                                        |
-                          +-------------+-------------+
-                          |                           |
-                          v                           v
-                    SQLite Storage              User Interface
-                    (Full audit trail)      (Dashboard, Detail, Appeal)
-                                                      |
-                                                      v
-                                          +---------------------+
-                                          | Human-in-the-Loop   |
-                                          | Review Interface    |
-                                          | (MANUAL_REVIEW)     |
-                                          +---------------------+
+                          CLAIM SUBMISSION
+                                |
+                +---------------+---------------+
+                |                               |
+          Form + Documents                 JSON Input
+                |                               |
+                v                               |
+     +---------------------+                    |
+     |     OCR Pipeline     |                   |
+     |                      |                   |
+     |  PDF --> unpdf       |                   |
+     |  Image --> tesseract |                   |
+     |  Fallback --> Gemini |                   |
+     |        Vision        |                   |
+     +---------+------------+                   |
+               |                                |
+               v                                |
+     +---------------------+                    |
+     |  Groq / Llama 3.3   |                   |
+     |  Structured JSON     |                   |
+     |  Extraction          |                   |
+     +---------+------------+                   |
+               |                                |
+               +----------> ClaimInput <--------+
+                                |
+                                v
+               +-------------------------------+
+               |      RAG Knowledge Base       |
+               |   (HuggingFace Embeddings)    |
+               |                               |
+               |   policy_terms.json (11 chunks)|
+               |   adjudication rules (chunked)|
+               |   medical knowledge (8 chunks)|
+               |   cosine similarity search    |
+               +---------------+---------------+
+                               |
+                               v
+     +--------------------------------------------------+
+     |              AI AGENT (Groq/Llama)               |
+     |                                                  |
+     |  The LLM autonomously decides which tools to     |
+     |  call and in what order. Available tools:         |
+     |                                                  |
+     |  lookup_member ........... verify member in DB   |
+     |  check_eligibility ....... policy + waiting      |
+     |  validate_documents ...... prescription, dr reg  |
+     |  check_coverage .......... exclusions, partial   |
+     |  calculate_limits ........ copay, sub-limits     |
+     |  detect_fraud ............ patterns, frequency   |
+     |  assess_medical_necessity  AI + RAG scoring      |
+     |  search_policy ........... semantic policy lookup |
+     |  make_decision ........... final structured call  |
+     |                                                  |
+     |  The agent reasons between steps:                |
+     |  - If coverage returns PARTIAL, passes adjusted  |
+     |    amount to calculate_limits                    |
+     |  - If any check returns REJECT, stops early      |
+     |  - Searches policy when unsure about a rule      |
+     +-------------------------+------------------------+
+                               |
+                               v
+     +--------------------------------------------------+
+     |            EXPLAINABILITY ENGINE                 |
+     |                                                  |
+     |  - Natural language summary                      |
+     |  - Amount waterfall (claim -> deductions -> net) |
+     |  - Line item breakdown (approved vs rejected)    |
+     |  - Counterfactual scenarios ("What if...")        |
+     |  - Confidence breakdown (rule vs AI)             |
+     |  - Policy section references                     |
+     +-------------------------+------------------------+
+                               |
+                 +-------------+-------------+
+                 |                           |
+                 v                           v
+           Turso DB                   User Interface
+           (Audit trail)          (Dashboard, Detail, Appeal)
+                                              |
+                                              v
+                                  +---------------------+
+                                  | Human-in-the-Loop   |
+                                  | Review Interface     |
+                                  +---------------------+
 ```
 
-### Decision Flow (Simplified)
+### Decision Flow
 
 ```
-Claim -> [Eligible?] --no--> REJECTED (POLICY_INACTIVE / WAITING_PERIOD)
-              |
-             yes
-              v
-         [Documents valid?] --no--> REJECTED (MISSING_DOCUMENTS / DOCTOR_REG_INVALID)
-              |
-             yes
-              v
-         [Treatment covered?] --excluded--> REJECTED (SERVICE_NOT_COVERED)
-              |                --partial---> PARTIAL (some items excluded)
-             yes
-              v
-         [Within limits?] --over--> REJECTED (PER_CLAIM_EXCEEDED)
-              |
-             yes (apply copay + network discount)
-              v
-         [Fraud indicators?] --yes--> MANUAL_REVIEW
-              |
+Claim --> [Eligible?] ----no----> REJECTED
+               |
+              yes
+               v
+         [Docs valid?] ---no----> REJECTED
+               |
+              yes
+               v
+         [Covered?] ---excluded-> REJECTED
+               |       --partial-> PARTIAL (some items excluded)
+              yes
+               v
+         [Within limits?] -over-> REJECTED
+               |
+              yes (copay + network discount applied)
+               v
+         [Fraud?] --------yes---> MANUAL_REVIEW
+               |
               no
-              v
-         [AI medical score?] --low--> MANUAL_REVIEW (NOT_MEDICALLY_NECESSARY)
-              |
+               v
+         [Medically necessary?] -> low score -> MANUAL_REVIEW
+               |
              high
-              v
-          APPROVED (with deductions applied)
+               v
+          APPROVED
 ```
+
+---
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Frontend | Next.js 16, React 19, TypeScript | App Router, server/client components |
-| Styling | Tailwind CSS v4, shadcn/ui | Component library, responsive design |
-| AI / LLM | Google Gemini 2.5 Flash | Multimodal document extraction, medical review |
-| Embeddings | Gemini text-embedding-004 | RAG vector search |
-| Database | SQLite + Drizzle ORM | Claims storage, member records, audit trail |
-| Document Processing | Gemini Vision (multimodal) | Direct image/PDF understanding (no OCR) |
+| Layer | Technology | Why this choice |
+|-------|-----------|-----------------|
+| **Framework** | Next.js 16, React 19, TypeScript | App Router with server/client components. API routes serve as backend. |
+| **Styling** | Tailwind CSS v4, shadcn/ui | Rapid UI development with consistent design tokens. |
+| **AI Agent** | Groq + Llama 3.3 70B (via Vercel AI SDK) | Free, fast inference. The Vercel AI SDK provides a clean tool-calling abstraction for the agentic loop. Groq's speed makes multi-step agent execution practical. |
+| **OCR** | unpdf + tesseract.js + Gemini Vision fallback | `unpdf` handles digital PDFs (free, instant). `tesseract.js` handles printed images (free, local). Gemini Vision only fires for handwritten/blurry docs — keeps API costs near zero. |
+| **Embeddings** | HuggingFace transformers.js (all-MiniLM-L6-v2) | Runs entirely on CPU, no API key needed. 384-dim vectors with good quality. Model downloads once (~23MB), then works offline. |
+| **Text Generation** | Groq / Llama 3.3 70B | Used for structured extraction from OCR text, medical review with RAG context, and policy Q&A. Free tier with key rotation for rate limits. |
+| **Database** | Turso (libSQL) + Drizzle ORM | Serverless SQLite — zero config, works locally and in cloud. Drizzle gives type-safe queries. |
+| **PDF Generation** | PDFKit | Generates sample medical documents for testing the pipeline. |
 
-### Why Gemini Vision instead of traditional OCR?
+### Why a hybrid OCR approach?
 
-Traditional OCR (Tesseract, Google Vision OCR) extracts raw text and requires post-processing pipelines to structure it. Gemini's multimodal API understands document layout, handwriting, stamps, and noisy images natively — extracting structured JSON directly from the visual input. This handles the real-world messiness of medical documents (faded prints, handwritten prescriptions, overlapping stamps) better than an OCR-then-parse pipeline.
+Medical documents come in many forms — clean digital PDFs, printed bills, handwritten prescriptions, blurry photos. No single tool handles all of these well:
 
-## Project Structure
+- **Digital PDFs** (most common): `unpdf` extracts embedded text instantly, no API call needed
+- **Printed images**: `tesseract.js` runs OCR locally — free and fast for clean text
+- **Hard cases** (handwritten, blurry, multilingual): Gemini Vision handles these well, but we only call it when local OCR confidence is below 55% or extracted text is too short
 
-```
-src/
-  app/
-    page.tsx                    # Dashboard — claims list, metrics, charts
-    submit/page.tsx             # Claim submission (form + file upload, or JSON)
-    claims/[id]/page.tsx        # Claim detail — explainability, review, appeal
-    policy/page.tsx             # RAG policy explorer with natural language Q&A
-    test-runner/page.tsx        # Test suite runner (all 10 test cases)
-    api/
-      claims/route.ts           # POST (submit) / GET (list) claims
-      claims/[id]/route.ts      # GET single claim
-      claims/[id]/appeal/       # POST appeal for rejected/partial claims
-      claims/[id]/review/       # POST human review for MANUAL_REVIEW claims
-      rag/route.ts              # GET (stats) / POST (semantic search)
-      rag/ask/route.ts          # POST natural language Q&A
-      test-cases/route.ts       # GET (run all) / POST (run single)
-  components/
-    ClaimBreakdown.tsx          # Explainability visualizations
-    ui/                         # shadcn/ui components
-  lib/
-    ai/
-      gemini.ts                 # Gemini client setup
-      extract.ts                # Document extraction + medical review
-      prompts.ts                # Prompt templates with few-shot examples
-      rag.ts                    # In-memory vector store, chunking, retrieval
-    engine/
-      pipeline.ts               # Adjudication orchestrator (6 steps)
-      eligibility.ts            # Step 1: policy status, waiting periods
-      documents.ts              # Step 2: prescription, doctor reg validation
-      coverage.ts               # Step 3: exclusions, partial coverage, pre-auth
-      limits.ts                 # Step 4: per-claim, annual, copay, network
-      fraud.ts                  # Step 5: same-day frequency, high-value
-      medical-review.ts         # Step 6: AI medical necessity scoring
-      explainability.ts         # Decision explanations, counterfactuals
-      test-runner.ts            # Test harness for test_cases.json
-    policy/
-      terms.ts                  # Typed accessors for policy_terms.json
-    db/
-      index.ts                  # SQLite initialization
-      schema.ts                 # Drizzle schema (members + claims)
-      seed.ts                   # Seed 10 test members
-    types.ts                    # All TypeScript types
-```
+This means ~80% of claims use zero API quota for OCR.
+
+### Why local embeddings instead of an API?
+
+The RAG knowledge base is small (~30 chunks of policy terms, rules, and medical knowledge). Using a local embedding model means:
+- No API key needed for RAG to work
+- No rate limits on embedding queries
+- The agent can call `search_policy` as many times as it needs without cost
+
+---
 
 ## Setup
 
 ### Prerequisites
 
 - Node.js 18+
-- A Google Gemini API key ([Get one here](https://aistudio.google.com/apikey))
+- A Groq API key (free — [get one here](https://console.groq.com/keys))
+- Optional: A Gemini API key for handwritten document OCR fallback ([get one here](https://aistudio.google.com/apikey))
 
 ### Installation
 
@@ -217,10 +192,32 @@ npm install
 Create a `.env.local` file:
 
 ```bash
-GEMINI_API_KEY=your_gemini_api_key_here
+# Required — powers the AI agent, extraction, and medical review
+GROQ_API_KEY=gsk_your_key_here
+
+# Optional — additional keys for rate limit rotation
+GROQ_API_KEY_2=gsk_second_key
+GROQ_API_KEY_3=gsk_third_key
+
+# Optional — switches between models (default: llama-3.1-8b-instant)
+# Use llama-3.3-70b-versatile for best quality
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# Optional — enables Gemini Vision fallback for hard OCR cases
+GEMINI_API_KEY=your_gemini_key_here
+
+# Database — Turso cloud or local SQLite
+TURSO_DATABASE_URL=libsql://your-db.turso.io   # or file:local.db for local
+TURSO_AUTH_TOKEN=your_turso_token
 ```
 
-The system works without an API key — the rule engine runs fully, but AI document extraction and medical review are disabled.
+> The system works without a Gemini key — local OCR handles most documents. Without a Groq key, the full rule engine still runs but without AI extraction or the agentic loop.
+
+### Database Setup
+
+```bash
+npm run db:push    # Push schema to database
+```
 
 ### Run
 
@@ -228,135 +225,159 @@ The system works without an API key — the rule engine runs fully, but AI docum
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3737](http://localhost:3737).
 
-### Run Test Cases
+---
 
-Visit [http://localhost:3000/test-runner](http://localhost:3000/test-runner) and click "Run All Tests" to validate the engine against all 10 provided test cases. Or run from CLI:
+## Testing
+
+### Generate Sample Documents
+
+The project includes a document generator that creates realistic medical PDFs matching Indian healthcare formats:
+
+```bash
+npx tsx scripts/generate-test-docs.ts
+```
+
+This creates 5 test documents in `scripts/test-docs/`.
+
+Pre-made test images are also available in `public/test-documents/` (`prescription_tc001.png`, `bill_tc001.png`, `dental_tc002.png`) — these can be uploaded directly via the Submit Claim UI.
+
+Generated PDFs:
+
+| Doc | Scenario | What it tests |
+|-----|----------|--------------|
+| `01_consultation_viral_fever.pdf` | Standard consultation + CBC + medicines | Happy path — full approval with copay |
+| `02_dental_with_cosmetic.pdf` | Root canal + teeth whitening | Cosmetic exclusion detection, partial coverage, per-claim limits |
+| `03_diabetes_checkup.pdf` | Diabetes follow-up with 6 diagnostic tests | Heavy diagnostics, pre-existing condition handling |
+| `04_weight_loss_excluded.pdf` | Bariatric consultation + diet plan | Policy exclusion (weight loss), supplement exclusion |
+| `05_pharmacy_branded_drugs.pdf` | Pharmacy-only bill with branded drugs | Branded vs generic drug copay |
+
+### Submit a Test Claim
+
+```bash
+curl -X POST http://localhost:3737/api/claims \
+  -F "member_id=EMP001" -F "member_name=Rajesh Kumar" \
+  -F "treatment_date=2025-03-15" -F "claim_amount=2045" \
+  -F "documents=@scripts/test-docs/01_consultation_viral_fever.pdf"
+```
+
+### Test Results
+
+End-to-end results with the full pipeline (OCR + Groq extraction + agentic adjudication):
+
+| # | Document | Expected | Actual Result | Details |
+|---|----------|----------|---------------|---------|
+| 1 | Viral fever consultation | Approve | **APPROVED ₹1,635** | Copay and network discounts applied correctly |
+| 2 | Dental + cosmetic whitening | Partial/Reject | **REJECTED** | Correctly identified cosmetic whitening as excluded (₹4,000 removed), remaining ₹13,300 exceeded dental per-claim limit |
+| 3 | Diabetes checkup | Approve | **APPROVED** (with 70B model) | 8B model fails on structured JSON extraction — use `llama-3.3-70b-versatile` for production |
+| 4 | Weight loss program | Reject | Agent correctly decided REJECT | Agent identified weight loss as excluded treatment |
+| 5 | Pharmacy branded drugs | Approve with copay | **APPROVED ₹999** | 10% copay correctly applied on ₹1,110 claim |
+
+> **Note on model choice**: The `llama-3.3-70b-versatile` model handles all 5 documents correctly. The `llama-3.1-8b-instant` model (default, higher rate limits) occasionally fails on structured JSON extraction. Set `GROQ_MODEL=llama-3.3-70b-versatile` in `.env.local` for best results.
+
+### Rule Engine Test Cases
+
+Visit [http://localhost:3737/test-runner](http://localhost:3737/test-runner) to run the 10 built-in test cases that validate the deterministic rule engine:
+
+| ID | Scenario | Expected | Validates |
+|----|----------|----------|-----------|
+| TC001 | Simple consultation (fever) | APPROVED, ₹1,350 | Co-pay deduction (10%) |
+| TC002 | Root canal + teeth whitening | PARTIAL, ₹8,000 | Cosmetic exclusion |
+| TC003 | Gastroenteritis, ₹7,500 | REJECTED | Per-claim limit (₹5,000) |
+| TC004 | Missing prescription | REJECTED | Document validation |
+| TC005 | Diabetes within 90 days | REJECTED | Specific ailment waiting period |
+| TC006 | Ayurvedic treatment | APPROVED, ₹4,000 | Alternative medicine coverage |
+| TC007 | MRI without pre-auth | REJECTED | Pre-authorization required |
+| TC008 | 3 claims same day | MANUAL_REVIEW | Fraud detection |
+| TC009 | Weight loss treatment | REJECTED | Policy exclusion |
+| TC010 | Apollo Hospital cashless | APPROVED, ₹3,600 | Network discount (20%) |
 
 ```bash
 npx tsx scripts/run-tests.ts
 ```
 
-## How It Works
+---
 
-### 1. Claim Submission
+## What Makes This Agentic
 
-Two input modes:
-- **Form + File Upload**: Upload medical document images/PDFs. Gemini Vision extracts structured data (patient info, diagnosis, line items, doctor details) directly from the visual content.
-- **JSON Input**: Paste structured claim data for testing or API integration.
+This is not a fixed pipeline with LLM calls bolted on. The AI agent:
 
-### 2. AI Document Processing
+- **Decides its own workflow**: The LLM chooses which tools to call based on the claim. A simple fever consultation might need 5 tool calls. A complex dental claim with cosmetic items triggers policy searches, coverage checks, and careful limit calculations — 10+ tool calls.
 
-When files are uploaded, they are sent to Gemini 2.5 Flash as multimodal input (base64 inline images). The model extracts:
-- Patient name, treatment date
-- Doctor name, registration number, qualification
-- Diagnosis and procedures
-- Itemized bill with per-item categorization
-- Medical necessity score (0-1) with reasoning
-- Flags for excluded items (cosmetic, weight loss, etc.)
+- **Reasons between steps**: When coverage returns `PARTIAL` with an adjusted amount, the agent passes that adjusted amount to `calculate_limits` (not the original claim amount). When a check returns `REJECT`, it stops processing and calls `make_decision` immediately.
 
-The extraction prompt uses few-shot examples and instructs the model to return `null` for unreadable fields (no hallucination).
+- **Searches for knowledge**: The agent can query the policy knowledge base at any point using `search_policy`. It does this when it's unsure about a rule — for example, searching for "dental exclusions" before making a coverage decision.
 
-### 3. RAG-Enhanced Medical Review
+- **Falls back gracefully**: If the agent fails (rate limit, timeout, malformed response), the system falls back to a deterministic 6-step pipeline that applies the same rules without LLM reasoning.
 
-Before the medical review LLM call:
-1. `policy_terms.json` is chunked into 11 semantic sections
-2. `adjudication_rules.md` is chunked by `##`/`###` headers
-3. 8 medical knowledge chunks provide domain context
-4. All chunks are embedded with `text-embedding-004`
-5. The diagnosis + treatment query retrieves top-5 most relevant chunks via cosine similarity
-6. Retrieved context is injected into the medical review prompt
+The deterministic pipeline acts as both a fallback and a set of tools for the agent. Each rule-engine function (`checkEligibility`, `validateDocuments`, etc.) serves double duty — callable directly in the pipeline or as an agent tool.
 
-This ensures the AI's medical assessment is grounded in the actual policy terms rather than general knowledge.
+---
 
-### 4. Rule Engine Pipeline
+## Pages
 
-Six sequential steps, each producing a structured `StepResult`:
+| Page | URL | Description |
+|------|-----|-------------|
+| Dashboard | `/` | Claims list with metrics, approval rates, rejection reasons |
+| Submit Claim | `/submit` | Upload documents or paste JSON to submit a new claim |
+| Claim Detail | `/claims/[id]` | Full explainability — amount waterfall, line items, agent reasoning, counterfactuals |
+| Policy Explorer | `/policy` | Natural language Q&A about the insurance policy (RAG-powered) |
+| Test Runner | `/test-runner` | Run and visualize all 10 rule-engine test cases |
+| Settings | `/settings` | Configure API keys at runtime |
 
-| Step | Checks | Possible Impact |
-|------|--------|----------------|
-| Eligibility | Policy active, waiting periods, member exists | REJECT |
-| Documents | Prescription present, doctor reg format, diagnosis | REJECT |
-| Coverage | Exclusions, partial items, pre-authorization | REJECT / PARTIAL |
-| Limits | Per-claim, annual, copay, network discount | REJECT / adjust amount |
-| Fraud | Same-day frequency, high-value, boundary amounts | MANUAL_REVIEW |
-| Medical Review | AI necessity score + RAG context | MANUAL_REVIEW |
+---
 
-The pipeline early-exits on hard REJECT. After all steps, the synthesizer applies priority rules (Fraud > Reject > Partial > Approve) and blends the confidence score (60% rule engine + 40% AI).
+## Project Structure
 
-### 5. Explainability
+```
+src/
+  lib/
+    ai/
+      agent.ts ............... Agentic adjudication (Groq/Llama + tool calling)
+      groq.ts ................ Groq client with key rotation
+      ocr.ts ................. Hybrid OCR (unpdf + tesseract + Gemini fallback)
+      extract.ts ............. Document extraction + medical review
+      rag.ts ................. In-memory vector store (HuggingFace embeddings)
+      prompts.ts ............. Prompt templates with few-shot examples
+      gemini.ts .............. Gemini Vision client (OCR fallback only)
+    engine/
+      pipeline.ts ............ Deterministic 6-step adjudication pipeline
+      eligibility.ts ......... Policy status, waiting periods
+      documents.ts ........... Prescription, doctor registration validation
+      coverage.ts ............ Exclusions, partial coverage, pre-auth
+      limits.ts .............. Per-claim limits, copay, network discounts
+      fraud.ts ............... Same-day frequency, high-value detection
+      medical-review.ts ...... AI medical necessity scoring
+      explainability.ts ...... Decision explanations, counterfactuals
+    db/
+      schema.ts .............. Drizzle schema (members + claims tables)
+      seed.ts ................ Seed 30 test members
+  app/
+    api/claims/route.ts ...... Main claim submission + listing endpoint
+    api/rag/ask/route.ts ..... Policy Q&A endpoint
+    submit/page.tsx .......... Claim submission UI
+    claims/[id]/page.tsx ..... Claim detail + review UI
+```
 
-Every decision includes:
-- **Natural language summary**: "Rajesh's claim of Rs 1,500 for Viral fever has been approved for Rs 1,350 after applicable deductions."
-- **Key factors**: Which steps passed/failed and why
-- **Amount waterfall**: Visual breakdown of claim -> deductions -> approved
-- **Line item diff**: Per-item claimed vs. approved with rejection reasons
-- **Counterfactuals**: "If pre-authorization had been obtained, this claim would likely have been approved"
-- **Policy references**: Which sections of the policy were evaluated
-- **Confidence breakdown**: Rule engine vs. AI component scores
-
-### 6. Human-in-the-Loop
-
-Claims flagged as `MANUAL_REVIEW` present a review interface where a human reviewer can:
-- Expand each pipeline step to see its reasoning
-- Accept or override individual step recommendations
-- Set a final decision (Approve/Reject/Partial) with override amount
-- Submit review notes for audit trail
-
-### 7. Appeals
-
-`REJECTED` and `PARTIAL` claims can be appealed by the claimant with:
-- Category selection (Documentation, Coverage, Amount, Other)
-- Free-text reason (min 10 characters)
-- Status transitions to `APPEALED` for human processing
-
-## Test Cases
-
-All 10 provided test cases are implemented and validated:
-
-| ID | Scenario | Expected | Validates |
-|----|----------|----------|-----------|
-| TC001 | Simple consultation (fever) | APPROVED, Rs 1,350 | Co-pay deduction (10%) |
-| TC002 | Root canal + teeth whitening | PARTIAL, Rs 8,000 | Cosmetic exclusion |
-| TC003 | Gastroenteritis, Rs 7,500 | REJECTED | Per-claim limit (Rs 5,000) |
-| TC004 | Missing prescription | REJECTED | Document validation |
-| TC005 | Diabetes within 90 days | REJECTED | Specific ailment waiting period |
-| TC006 | Ayurvedic treatment | APPROVED, Rs 4,000 | Alternative medicine coverage |
-| TC007 | MRI without pre-auth | REJECTED | Pre-authorization required |
-| TC008 | 3 claims same day | MANUAL_REVIEW | Fraud detection |
-| TC009 | Weight loss treatment | REJECTED | Policy exclusion |
-| TC010 | Apollo Hospital cashless | APPROVED, Rs 3,600 | Network discount (20%) |
+---
 
 ## Key Design Decisions
 
-### Category-Aware Per-Claim Limits
-The per-claim limit of Rs 5,000 applies to general claims. Category-specific sub-limits (dental Rs 10K, diagnostic Rs 10K, alt medicine Rs 8K) override this when a claim is entirely within that category. This allows TC002 (dental, Rs 8,000) to pass the limits check while TC003 (general, Rs 7,500) is correctly rejected.
+**Category-aware per-claim limits**: The general per-claim limit is ₹5,000, but dental (₹10K), diagnostic (₹10K), and alternative medicine (₹8K) have their own sub-limits. This lets a ₹8,000 dental claim pass while a ₹7,500 general claim is rejected.
 
-### Co-Pay Applies Only to General Claims
-The 10% co-pay is under `consultation_fees` in the policy JSON, meaning it applies to general consultation claims only — not to network claims, dental, alternative medicine, or other specialty categories. This correctly produces TC001's Rs 1,350 and TC006's Rs 4,000.
+**Copay on general claims only**: The 10% copay applies to consultation-type claims, not specialty categories. This correctly produces ₹1,350 for a ₹1,500 fever consultation and ₹4,000 for an ₹4,000 Ayurvedic treatment.
 
-### Confidence Blending
-The final confidence score blends deterministic rule clarity (60% weight) with the AI medical necessity score (40% weight). AI-raised flags further reduce confidence by 3% each. If blended confidence drops below 70%, the claim is forced to MANUAL_REVIEW regardless of the rule engine's decision.
+**Confidence blending**: Final confidence = 60% rule engine clarity + 40% AI medical score. Below 70% triggers MANUAL_REVIEW regardless of the rule engine's decision.
 
-### Graceful AI Degradation
-If `GEMINI_API_KEY` is not configured, the system runs the full rule engine without AI. The medical review step passes neutrally, and confidence is based on rule engine clarity alone. This means the core adjudication logic works without any external API dependency.
+**Groq key rotation**: The system supports up to 3 Groq API keys (`GROQ_API_KEY`, `_2`, `_3`). On a 429 rate limit, it automatically rotates to the next key and retries. This effectively 3x's the free tier.
+
+---
 
 ## Assumptions
 
-1. **Member database**: Pre-seeded with 10 test members (EMP001-EMP010). In production, this would integrate with an HR/policy management system.
-2. **YTD tracking**: Year-to-date approved amount defaults to 0 for test cases. In production, this would be calculated from historical claims.
-3. **Doctor registration validation**: Format-checked only (StateCode/Number/Year). No external registry lookup.
-4. **Network hospital matching**: Bidirectional substring match (e.g., "Apollo" matches "Apollo Hospitals"). In production, this would use a provider ID lookup.
-5. **Document storage**: File content is not persisted — only extraction results. In production, files would go to cloud storage (S3/GCS) with encryption.
-6. **Single policy**: The system operates against one policy configuration (`policy_terms.json`). Multi-policy support would require policy selection at submission time.
-
-## Potential Improvements
-
-- **Late submission check**: Validate `submission_date - treatment_date <= 30 days`
-- **Duplicate claim detection**: Query DB for same member + treatment date + similar amount
-- **Multi-language support**: Gemini can handle regional language documents; the prompts could be extended
-- **Audit log table**: Separate table for all state transitions
-- **Webhook notifications**: Notify members on decision via email/SMS
-- **Batch processing**: API endpoint for bulk claim submission
-- **CI/CD pipeline**: GitHub Actions for lint, type-check, test runner on PR
+1. **30 pre-seeded members** (EMP001-EMP030). Production would integrate with HR/policy systems.
+2. **YTD tracking** defaults to 0. Production would calculate from historical claims.
+3. **Doctor registration** is format-validated only (StateCode/Number/Year), not verified against an external registry.
+4. **Network hospital matching** uses substring match. Production would use a provider ID lookup.
+5. **Single policy** — operates against `policy_terms.json`. Multi-policy support would require policy selection at submission.
