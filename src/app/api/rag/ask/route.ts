@@ -40,7 +40,9 @@ Answer in 2-3 sentences maximum. Start with the direct answer.`;
 
       answer = await groqGenerate(prompt, { temperature: 0.2, maxOutputTokens: 300 });
     } else {
-      answer = `From the policy:\n\n${results.slice(0, 3).map(r => `• ${r.chunk.text}`).join('\n\n')}\n\n(AI-generated summary unavailable — showing raw policy excerpts.)`;
+      // Fallback when Groq is unavailable — show relevant excerpts without misleading preamble
+      const excerpts = results.slice(0, 3).map(r => `• ${r.chunk.text}`).join('\n\n');
+      answer = `${excerpts}\n\n(Note: AI summary unavailable — showing relevant policy excerpts. Configure GROQ_API_KEY for natural language answers.)`;
     }
 
     return Response.json({

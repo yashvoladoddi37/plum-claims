@@ -37,6 +37,46 @@ const SOURCE_ICONS: Record<string, string> = {
   medical_knowledge: "🏥",
 };
 
+/** Render simple markdown (bold, code, backticks) as inline HTML */
+function renderMarkdown(text: string) {
+  // Split by markdown patterns and render inline
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let key = 0;
+
+  // Process **bold**, `code`, and ```code blocks```
+  const regex = /\*\*(.+?)\*\*|`{3}([\s\S]*?)`{3}|`(.+?)`/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(remaining)) !== null) {
+    // Add text before match
+    if (match.index > lastIndex) {
+      parts.push(remaining.slice(lastIndex, match.index));
+    }
+
+    if (match[1]) {
+      // **bold**
+      parts.push(<strong key={key++}>{match[1]}</strong>);
+    } else if (match[2]) {
+      // ```code block```
+      parts.push(<code key={key++} className="block bg-muted px-3 py-2 rounded text-xs font-mono my-1 whitespace-pre-wrap">{match[2].trim()}</code>);
+    } else if (match[3]) {
+      // `inline code`
+      parts.push(<code key={key++} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{match[3]}</code>);
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < remaining.length) {
+    parts.push(remaining.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
 const SAMPLE_QUESTIONS = [
   "Am I covered for Ayurvedic treatment?",
   "What is the per-claim limit?",
@@ -238,7 +278,7 @@ export default function PolicyExplorer() {
                       {(r.similarity * 100).toFixed(0)}% match
                     </span>
                   </div>
-                  <p className="text-sm leading-relaxed">{r.text}</p>
+                  <p className="text-sm leading-relaxed">{renderMarkdown(r.text)}</p>
                 </div>
               ))}
             </div>
@@ -287,7 +327,7 @@ export default function PolicyExplorer() {
                       <span className="text-xs text-muted-foreground ml-auto">{isExpanded ? '▲' : '▼'}</span>
                     </div>
                     {isExpanded ? (
-                      <p className="text-sm leading-relaxed mt-2 whitespace-pre-wrap">{chunk.text}</p>
+                      <p className="text-sm leading-relaxed mt-2 whitespace-pre-wrap">{renderMarkdown(chunk.text)}</p>
                     ) : (
                       <p className="text-muted-foreground text-xs truncate">{chunk.textPreview}</p>
                     )}
