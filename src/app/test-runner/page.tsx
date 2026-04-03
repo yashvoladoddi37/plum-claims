@@ -26,10 +26,10 @@ interface TestResult {
 }
 
 const DECISION_COLORS: Record<string, string> = {
-  APPROVED: "bg-emerald-100 text-emerald-800",
-  REJECTED: "bg-red-100 text-red-800",
-  PARTIAL: "bg-amber-100 text-amber-800",
-  MANUAL_REVIEW: "bg-orange-100 text-orange-800",
+  APPROVED: "bg-[#27a644]/15 text-[#27a644]",
+  REJECTED: "bg-[#b53333]/10 text-[#b53333]",
+  PARTIAL: "bg-amber-600/10 text-amber-700",
+  MANUAL_REVIEW: "bg-orange-500/10 text-orange-700",
 };
 
 export default function TestRunner() {
@@ -122,16 +122,16 @@ export default function TestRunner() {
     const d = tc.input_data;
     const docs = d.documents || {};
     return (
-      <div className="text-xs space-y-1.5 text-muted-foreground">
+      <div className="text-xs space-y-1.5 text-[#5e5d59]">
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <span><span className="font-medium text-foreground">Patient:</span> {d.member_name}</span>
-          <span><span className="font-medium text-foreground">Amount:</span> {formatAmount(d.claim_amount)}</span>
-          <span><span className="font-medium text-foreground">Date:</span> {d.treatment_date}</span>
-          {d.hospital && <span><span className="font-medium text-foreground">Hospital:</span> {d.hospital}</span>}
+          <span><span className="font-medium text-[#141413]">Patient:</span> {d.member_name}</span>
+          <span><span className="font-medium text-[#141413]">Amount:</span> {formatAmount(d.claim_amount)}</span>
+          <span><span className="font-medium text-[#141413]">Date:</span> {d.treatment_date}</span>
+          {d.hospital && <span><span className="font-medium text-[#141413]">Hospital:</span> {d.hospital}</span>}
         </div>
         {docs.prescription && (
-          <div className="border-t pt-1.5 mt-1.5">
-            <span className="font-medium text-foreground">Prescription:</span>{" "}
+          <div className="border-t border-[#f0eee6] pt-1.5 mt-1.5">
+            <span className="font-medium text-[#141413]">Prescription:</span>{" "}
             Dr. {docs.prescription.doctor_name} ({docs.prescription.doctor_reg}) — {docs.prescription.diagnosis || "No diagnosis"}
             {docs.prescription.medicines_prescribed && (
               <span className="block ml-2">💊 {docs.prescription.medicines_prescribed.join(", ")}</span>
@@ -145,16 +145,16 @@ export default function TestRunner() {
           </div>
         )}
         {docs.bill && (
-          <div className="border-t pt-1.5 mt-1.5">
-            <span className="font-medium text-foreground">Bill items:</span>{" "}
+          <div className="border-t border-[#f0eee6] pt-1.5 mt-1.5">
+            <span className="font-medium text-[#141413]">Bill items:</span>{" "}
             {Object.entries(docs.bill).map(([k, v]) => `${k.replace(/_/g, " ")}: ₹${v}`).join(", ")}
           </div>
         )}
         {!docs.prescription && !docs.bill && (
-          <div className="border-t pt-1.5 mt-1.5 text-amber-600">⚠️ No documents attached</div>
+          <div className="border-t border-[#f0eee6] pt-1.5 mt-1.5 text-amber-700">⚠️ No documents attached</div>
         )}
         {d.previous_claims_same_day && (
-          <div className="text-amber-600">⚠️ {d.previous_claims_same_day} previous claims on same day</div>
+          <div className="text-amber-700">⚠️ {d.previous_claims_same_day} previous claims on same day</div>
         )}
         {d.cashless_request && <div>💳 Cashless request</div>}
       </div>
@@ -170,17 +170,17 @@ export default function TestRunner() {
           {exp.approved_amount !== undefined && <span className="font-mono font-medium">{formatAmount(exp.approved_amount)}</span>}
         </div>
         {exp.rejection_reasons && (
-          <div className="text-red-600">Reasons: {exp.rejection_reasons.join(", ")}</div>
+          <div className="text-[#b53333]">Reasons: {exp.rejection_reasons.join(", ")}</div>
         )}
         {exp.rejected_items && (
-          <div className="text-amber-600">Excluded: {exp.rejected_items.join(", ")}</div>
+          <div className="text-amber-700">Excluded: {exp.rejected_items.join(", ")}</div>
         )}
         {exp.deductions && Object.keys(exp.deductions).length > 0 && (
           <div>Deductions: {Object.entries(exp.deductions).map(([k, v]) => `${k}: ₹${v}`).join(", ")}</div>
         )}
         {exp.notes && <div className="italic">{exp.notes}</div>}
-        {exp.flags && <div className="text-orange-600">🚩 {exp.flags.join(", ")}</div>}
-        <div className="text-muted-foreground">Confidence: {((exp.confidence_score || 0) * 100).toFixed(0)}%</div>
+        {exp.flags && <div className="text-orange-700">🚩 {exp.flags.join(", ")}</div>}
+        <div className="text-[#5e5d59]">Confidence: {((exp.confidence_score || 0) * 100).toFixed(0)}%</div>
       </div>
     );
   }
@@ -189,15 +189,15 @@ export default function TestRunner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Test Runner</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-2xl font-semibold text-[#141413]">Test Runner</h1>
+          <p className="text-[#5e5d59] text-sm">
             {testCases.length} test cases loaded — review inputs &amp; expected outputs, then run individually or all at once
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex border rounded-md overflow-hidden text-sm">
-            <button onClick={() => setViewMode("cards")} className={`px-3 py-1.5 ${viewMode === "cards" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>Cards</button>
-            <button onClick={() => setViewMode("table")} className={`px-3 py-1.5 ${viewMode === "table" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>Table</button>
+          <div className="flex border border-[#f0eee6] rounded-md overflow-hidden text-sm">
+            <button onClick={() => setViewMode("cards")} className={`px-3 py-1.5 ${viewMode === "cards" ? "bg-[#c96442] text-white" : "bg-[#faf9f5] hover:bg-[#f0eee6] text-[#141413]"}`}>Cards</button>
+            <button onClick={() => setViewMode("table")} className={`px-3 py-1.5 ${viewMode === "table" ? "bg-[#c96442] text-white" : "bg-[#faf9f5] hover:bg-[#f0eee6] text-[#141413]"}`}>Table</button>
           </div>
           <Button onClick={runAllTests} disabled={loading} size="lg">
             {loading ? "Running..." : "▶ Run All Tests"}
@@ -209,16 +209,16 @@ export default function TestRunner() {
       {hasResults && (
         <>
           <div className="grid grid-cols-3 gap-4">
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total Run</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold">{summary.total}</div></CardContent></Card>
-            <Card className="border-green-200"><CardHeader className="pb-2"><CardTitle className="text-sm text-green-600">Passed</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold text-green-600">{summary.passed}</div></CardContent></Card>
-            <Card className={summary.failed > 0 ? "border-red-200" : "border-green-200"}>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-red-600">Failed</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold text-red-600">{summary.failed}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border-[#f0eee6]"><CardHeader className="pb-2"><CardTitle className="text-sm text-[#5e5d59]">Total Run</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-[#141413]">{summary.total}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border-[#27a644]/30"><CardHeader className="pb-2"><CardTitle className="text-sm text-[#27a644]">Passed</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-[#27a644]">{summary.passed}</div></CardContent></Card>
+            <Card className={`bg-[#faf9f5] ${summary.failed > 0 ? "border-[#b53333]/30" : "border-[#27a644]/30"}`}>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-[#b53333]">Failed</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-[#b53333]">{summary.failed}</div></CardContent></Card>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div className="bg-green-500 h-3 rounded-full transition-all" style={{ width: `${summary.total > 0 ? (summary.passed / summary.total) * 100 : 0}%` }} />
+          <div className="w-full bg-[#f0eee6] rounded-full h-3">
+            <div className="bg-[#27a644] h-3 rounded-full transition-all" style={{ width: `${summary.total > 0 ? (summary.passed / summary.total) * 100 : 0}%` }} />
           </div>
         </>
       )}
@@ -231,11 +231,11 @@ export default function TestRunner() {
             const isRunning = runningCase === tc.case_id;
             const isExpanded = expandedCase === tc.case_id;
             return (
-              <Card key={tc.case_id} className={`transition-all ${result ? (result.passed ? "border-green-300 bg-green-50/30" : "border-red-300 bg-red-50/30") : "hover:border-primary/30"}`}>
+              <Card key={tc.case_id} className={`transition-all bg-[#faf9f5] ${result ? (result.passed ? "border-[#27a644]/30 bg-[#27a644]/5" : "border-[#b53333]/30 bg-[#b53333]/5") : "border-[#f0eee6] hover:border-[#c96442]/30"}`}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-muted-foreground">{tc.case_id}</span>
+                      <span className="font-mono text-xs text-[#5e5d59]">{tc.case_id}</span>
                       {result && <span>{result.passed ? "✅" : "❌"}</span>}
                     </div>
                     <Button size="sm" variant={result ? "ghost" : "outline"} disabled={isRunning || loading}
@@ -243,18 +243,18 @@ export default function TestRunner() {
                       {isRunning ? "Running..." : result ? "Re-run" : "▶ Run"}
                     </Button>
                   </div>
-                  <CardTitle className="text-sm leading-tight">{tc.case_name}</CardTitle>
-                  <p className="text-xs text-muted-foreground">{tc.description}</p>
+                  <CardTitle className="text-sm leading-tight text-[#141413]">{tc.case_name}</CardTitle>
+                  <p className="text-xs text-[#5e5d59]">{tc.description}</p>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* Input Summary */}
                   <div>
                     <button onClick={() => setExpandedCase(isExpanded ? null : tc.case_id)}
-                      className="text-xs font-medium text-primary hover:underline flex items-center gap-1 mb-1">
+                      className="text-xs font-medium text-[#c96442] hover:underline flex items-center gap-1 mb-1">
                       {isExpanded ? "▼" : "▶"} Input Details
                     </button>
                     {isExpanded && (
-                      <div className="bg-muted/50 rounded-lg p-2.5 border">
+                      <div className="bg-[#f0eee6] rounded-lg p-2.5 border border-[#f0eee6]">
                         {renderInputSummary(tc)}
                       </div>
                     )}
@@ -262,8 +262,8 @@ export default function TestRunner() {
 
                   {/* Expected Output */}
                   <div>
-                    <p className="text-xs font-medium mb-1">Expected Output:</p>
-                    <div className="bg-muted/50 rounded-lg p-2.5 border">
+                    <p className="text-xs font-medium mb-1 text-[#141413]">Expected Output:</p>
+                    <div className="bg-[#f0eee6] rounded-lg p-2.5 border border-[#f0eee6]">
                       {renderExpected(tc)}
                     </div>
                   </div>
@@ -271,22 +271,22 @@ export default function TestRunner() {
                   {/* Actual Result (after running) */}
                   {result && (
                     <div>
-                      <p className="text-xs font-medium mb-1">Actual Result:</p>
-                      <div className={`rounded-lg p-2.5 border text-xs space-y-1 ${result.passed ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+                      <p className="text-xs font-medium mb-1 text-[#141413]">Actual Result:</p>
+                      <div className={`rounded-lg p-2.5 border text-xs space-y-1 ${result.passed ? "bg-[#27a644]/5 border-[#27a644]/20" : "bg-[#b53333]/5 border-[#b53333]/20"}`}>
                         <div className="flex items-center gap-2">
                           <Badge className={`${DECISION_COLORS[result.actual_decision] || ""} text-xs`}>{result.actual_decision}</Badge>
-                          <span className="font-mono font-medium">{formatAmount(result.actual_amount)}</span>
+                          <span className="font-mono font-medium text-[#141413]">{formatAmount(result.actual_amount)}</span>
                         </div>
                         {result.actual_reasons.length > 0 && (
-                          <div className="text-red-600">Reasons: {result.actual_reasons.join(", ")}</div>
+                          <div className="text-[#b53333]">Reasons: {result.actual_reasons.join(", ")}</div>
                         )}
-                        <p className="text-muted-foreground">{result.details}</p>
+                        <p className="text-[#5e5d59]">{result.details}</p>
                         <button onClick={() => setExpandedCase(expandedCase === tc.case_id + "_detail" ? null : tc.case_id + "_detail")}
-                          className="text-primary hover:underline text-xs">
+                          className="text-[#c96442] hover:underline text-xs">
                           {expandedCase === tc.case_id + "_detail" ? "Hide" : "Show"} full pipeline output
                         </button>
                         {expandedCase === tc.case_id + "_detail" && (
-                          <pre className="bg-white p-2 rounded text-xs overflow-auto max-h-48 border">
+                          <pre className="bg-[#faf9f5] p-2 rounded text-xs overflow-auto max-h-48 border border-[#f0eee6] text-[#141413]">
                             {JSON.stringify(result.decision, null, 2)}
                           </pre>
                         )}
@@ -302,18 +302,18 @@ export default function TestRunner() {
 
       {/* Table View */}
       {viewMode === "table" && (
-        <Card>
+        <Card className="bg-[#faf9f5] border-[#f0eee6]">
           <CardContent className="pt-4">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="border-[#f0eee6]">
                   <TableHead className="w-10"></TableHead>
-                  <TableHead className="w-20">ID</TableHead>
-                  <TableHead>Scenario</TableHead>
-                  <TableHead>Patient</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Expected</TableHead>
-                  <TableHead>Actual</TableHead>
+                  <TableHead className="w-20 text-[#5e5d59]">ID</TableHead>
+                  <TableHead className="text-[#5e5d59]">Scenario</TableHead>
+                  <TableHead className="text-[#5e5d59]">Patient</TableHead>
+                  <TableHead className="text-right text-[#5e5d59]">Amount</TableHead>
+                  <TableHead className="text-[#5e5d59]">Expected</TableHead>
+                  <TableHead className="text-[#5e5d59]">Actual</TableHead>
                   <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -324,33 +324,33 @@ export default function TestRunner() {
                   const isExpanded = expandedCase === tc.case_id;
                   return (
                     <Fragment key={tc.case_id}>
-                      <TableRow key={tc.case_id} className="cursor-pointer hover:bg-muted/50"
+                      <TableRow key={tc.case_id} className="cursor-pointer hover:bg-[#f0eee6] border-[#f0eee6]"
                         onClick={() => setExpandedCase(isExpanded ? null : tc.case_id)}>
                         <TableCell>{result ? (result.passed ? "✅" : "❌") : "⬜"}</TableCell>
-                        <TableCell className="font-mono text-xs">{tc.case_id}</TableCell>
+                        <TableCell className="font-mono text-xs text-[#5e5d59]">{tc.case_id}</TableCell>
                         <TableCell>
-                          <div className="text-sm font-medium">{tc.case_name}</div>
-                          <div className="text-xs text-muted-foreground">{tc.description}</div>
+                          <div className="text-sm font-medium text-[#141413]">{tc.case_name}</div>
+                          <div className="text-xs text-[#5e5d59]">{tc.description}</div>
                         </TableCell>
-                        <TableCell className="text-sm">{tc.input_data.member_name}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">{formatAmount(tc.input_data.claim_amount)}</TableCell>
+                        <TableCell className="text-sm text-[#141413]">{tc.input_data.member_name}</TableCell>
+                        <TableCell className="text-right font-mono text-sm text-[#141413]">{formatAmount(tc.input_data.claim_amount)}</TableCell>
                         <TableCell>
                           <Badge className={`${DECISION_COLORS[tc.expected_output.decision] || ""} text-xs`}>
                             {tc.expected_output.decision}
                           </Badge>
                           {tc.expected_output.approved_amount !== undefined && (
-                            <span className="block text-xs font-mono mt-0.5">{formatAmount(tc.expected_output.approved_amount)}</span>
+                            <span className="block text-xs font-mono mt-0.5 text-[#141413]">{formatAmount(tc.expected_output.approved_amount)}</span>
                           )}
                         </TableCell>
                         <TableCell>
                           {result ? (
                             <>
-                              <Badge className={`${result.passed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"} text-xs`}>
+                              <Badge className={`${result.passed ? "bg-[#27a644]/15 text-[#27a644]" : "bg-[#b53333]/10 text-[#b53333]"} text-xs`}>
                                 {result.actual_decision}
                               </Badge>
-                              <span className="block text-xs font-mono mt-0.5">{formatAmount(result.actual_amount)}</span>
+                              <span className="block text-xs font-mono mt-0.5 text-[#141413]">{formatAmount(result.actual_amount)}</span>
                             </>
-                          ) : <span className="text-xs text-muted-foreground">Not run</span>}
+                          ) : <span className="text-xs text-[#5e5d59]">Not run</span>}
                         </TableCell>
                         <TableCell>
                           <Button size="sm" variant="ghost" disabled={isRunning || loading}
@@ -361,23 +361,23 @@ export default function TestRunner() {
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`${tc.case_id}-expand`}>
-                          <TableCell colSpan={8} className="bg-muted/30">
+                          <TableCell colSpan={8} className="bg-[#f0eee6]/50">
                             <div className="grid grid-cols-2 gap-4 p-2">
                               <div>
-                                <p className="text-xs font-medium mb-1.5">Input Details:</p>
-                                <div className="bg-white rounded-lg p-2.5 border">
+                                <p className="text-xs font-medium mb-1.5 text-[#141413]">Input Details:</p>
+                                <div className="bg-[#faf9f5] rounded-lg p-2.5 border border-[#f0eee6]">
                                   {renderInputSummary(tc)}
                                 </div>
                               </div>
                               <div>
-                                <p className="text-xs font-medium mb-1.5">Expected Output:</p>
-                                <div className="bg-white rounded-lg p-2.5 border">
+                                <p className="text-xs font-medium mb-1.5 text-[#141413]">Expected Output:</p>
+                                <div className="bg-[#faf9f5] rounded-lg p-2.5 border border-[#f0eee6]">
                                   {renderExpected(tc)}
                                 </div>
                                 {result && (
                                   <>
-                                    <p className="text-xs font-medium mt-2 mb-1.5">Pipeline Output:</p>
-                                    <pre className="bg-white p-2.5 rounded-lg text-xs overflow-auto max-h-48 border">
+                                    <p className="text-xs font-medium mt-2 mb-1.5 text-[#141413]">Pipeline Output:</p>
+                                    <pre className="bg-[#faf9f5] p-2.5 rounded-lg text-xs overflow-auto max-h-48 border border-[#f0eee6] text-[#141413]">
                                       {JSON.stringify(result.decision, null, 2)}
                                     </pre>
                                   </>
@@ -398,8 +398,8 @@ export default function TestRunner() {
 
       {/* Empty state */}
       {testCases.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
+        <Card className="bg-[#faf9f5] border-[#f0eee6]">
+          <CardContent className="py-12 text-center text-[#5e5d59]">
             <p className="text-lg mb-2">Loading test cases...</p>
             <p className="text-sm">Make sure test_cases.json is available in the public directory.</p>
           </CardContent>

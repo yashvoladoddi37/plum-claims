@@ -48,18 +48,11 @@ export function calculateLimits(
   const amountToCheck = adjustedAmount ?? claim.claim_amount;
 
   if (amountToCheck > effectiveLimit) {
-    // If exceeds the category limit, it's a reject on per-claim exceeded
-    // But if the category limit is higher than per-claim (e.g. dental ₹10K > ₹5K),
-    // and the amount fits within category, it passes.
+    // Claim exceeds per-claim limit — approve up to the limit (partial approval)
+    // per adjudication rules: "Claim exceeds limits (approve up to limit)"
     reasons.push('PER_CLAIM_EXCEEDED');
-    details.push(`Claim amount ₹${amountToCheck} exceeds per-claim limit of ₹${effectiveLimit}.`);
-    return {
-      step: 'Limits Check',
-      passed: false,
-      decision_impact: 'REJECT',
-      reasons,
-      details: details.join(' '),
-    };
+    details.push(`Claim amount ₹${amountToCheck} exceeds per-claim limit of ₹${effectiveLimit}. Approved up to ₹${effectiveLimit}.`);
+    workingAmount = effectiveLimit;
   }
 
   // 2. Annual limit check
@@ -125,11 +118,13 @@ export function calculateLimits(
 
   const approvedAmount = Math.round(workingAmount);
 
+  const perClaimCapped = reasons.includes('PER_CLAIM_EXCEEDED');
+
   return {
     step: 'Limits Check',
-    passed: true,
-    decision_impact: 'NONE',
-    reasons: [],
+    passed: !perClaimCapped,
+    decision_impact: perClaimCapped ? 'PARTIAL' : 'NONE',
+    reasons,
     details: details.length > 0 ? details.join(' ') : `Claim of ₹${claim.claim_amount} is within all limits.`,
     adjustments: {
       approved_amount: approvedAmount,

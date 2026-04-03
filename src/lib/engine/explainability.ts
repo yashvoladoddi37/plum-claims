@@ -144,13 +144,18 @@ function buildCounterfactuals(decision: Decision, claim: ClaimInput): Counterfac
             icon: '📄',
           });
           break;
-        case 'PER_CLAIM_EXCEEDED':
+        case 'PER_CLAIM_EXCEEDED': {
+          // Extract the actual limit from the step details (e.g. "exceeds per-claim limit of ₹10000")
+          const limitsStep = decision.steps.find(s => s.step === 'Limits Check');
+          const limitMatch = limitsStep?.details?.match(/per-claim limit of ₹(\d+)/);
+          const effectiveLimit = limitMatch ? `₹${Number(limitMatch[1]).toLocaleString()}` : '₹5,000';
           cfs.push({
-            condition: `If the claim amount was ₹5,000 or less (per-claim limit)`,
-            result: 'The claim would pass the limits check',
+            condition: `If the claim amount was ${effectiveLimit} or less (per-claim limit)`,
+            result: 'The full claim amount would pass the limits check without being capped',
             icon: '💰',
           });
           break;
+        }
         case 'SERVICE_NOT_COVERED':
           cfs.push({
             condition: 'If the treatment was for a covered medical condition',

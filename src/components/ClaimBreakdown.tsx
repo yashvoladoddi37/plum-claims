@@ -45,10 +45,10 @@ interface ExplanationData {
 
 export function DecisionSummary({ explanation, status }: { explanation: ExplanationData; status: string }) {
   const bgMap: Record<string, string> = {
-    APPROVED: "bg-emerald-50 border-emerald-200",
-    REJECTED: "bg-red-50 border-red-200",
-    PARTIAL: "bg-amber-50 border-amber-200",
-    MANUAL_REVIEW: "bg-orange-50 border-orange-200",
+    APPROVED: "bg-[#27a644]/10 border-[#27a644]/30",
+    REJECTED: "bg-[#b53333]/10 border-[#b53333]/30",
+    PARTIAL: "bg-amber-600/10 border-amber-600/30",
+    MANUAL_REVIEW: "bg-orange-500/10 border-orange-500/30",
   };
   const iconMap: Record<string, string> = {
     APPROVED: "✅", REJECTED: "❌", PARTIAL: "⚠️", MANUAL_REVIEW: "🔍",
@@ -59,12 +59,12 @@ export function DecisionSummary({ explanation, status }: { explanation: Explanat
       <div className="flex items-start gap-3">
         <span className="text-3xl">{iconMap[status] || "📋"}</span>
         <div className="flex-1">
-          <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-1">Why This Decision</h3>
-          <p className="text-sm leading-relaxed">{explanation.summary}</p>
+          <h3 className="font-semibold text-sm uppercase tracking-wider text-[#87867f] mb-1">Why This Decision</h3>
+          <p className="text-sm leading-relaxed text-[#4d4c48]">{explanation.summary}</p>
           {explanation.key_factors.length > 0 && (
             <div className="mt-3 space-y-1">
               {explanation.key_factors.map((f, i) => (
-                <p key={i} className="text-xs text-muted-foreground">{f}</p>
+                <p key={i} className="text-xs text-[#87867f]">{f}</p>
               ))}
             </div>
           )}
@@ -81,19 +81,19 @@ export function ConfidenceBreakdownViz({ breakdown }: { breakdown: ConfidenceBre
   const aiW = Math.round(breakdown.ai_medical * 100);
   const blended = Math.round(breakdown.blended * 100);
 
-  const barColor = blended >= 90 ? "bg-emerald-500" : blended >= 70 ? "bg-amber-500" : "bg-red-500";
+  const barColor = blended >= 90 ? "bg-[#27a644]" : blended >= 70 ? "bg-amber-700" : "bg-[#b53333]";
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confidence Score</span>
-        <span className={`text-lg font-bold ${blended >= 90 ? "text-emerald-600" : blended >= 70 ? "text-amber-600" : "text-red-600"}`}>
+        <span className="text-xs font-semibold text-[#87867f] uppercase tracking-wider">Confidence Score</span>
+        <span className={`text-lg font-bold ${blended >= 90 ? "text-[#27a644]" : blended >= 70 ? "text-amber-700" : "text-[#b53333]"}`}>
           {blended}%
         </span>
       </div>
 
       {/* Overall bar */}
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
+      <div className="w-full bg-[#e8e6dc] rounded-full h-2.5">
         <div className={`${barColor} h-2.5 rounded-full transition-all duration-700`} style={{ width: `${blended}%` }} />
       </div>
 
@@ -101,20 +101,20 @@ export function ConfidenceBreakdownViz({ breakdown }: { breakdown: ConfidenceBre
       <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-muted-foreground">🔧 Rule Engine (60%)</span>
-            <span className="font-mono font-semibold">{ruleW}%</span>
+            <span className="text-[#87867f]">🔧 Rule Engine (60%)</span>
+            <span className="font-mono font-semibold text-[#4d4c48]">{ruleW}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${ruleW}%` }} />
+          <div className="w-full bg-[#e8e6dc] rounded-full h-1.5">
+            <div className="bg-[#c96442] h-1.5 rounded-full" style={{ width: `${ruleW}%` }} />
           </div>
         </div>
         <div>
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-muted-foreground">🧠 AI Medical (40%)</span>
-            <span className="font-mono font-semibold">{aiW}%</span>
+            <span className="text-[#87867f]">🧠 AI Medical (40%)</span>
+            <span className="font-mono font-semibold text-[#4d4c48]">{aiW}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${aiW}%` }} />
+          <div className="w-full bg-[#e8e6dc] rounded-full h-1.5">
+            <div className="bg-[#d97757] h-1.5 rounded-full" style={{ width: `${aiW}%` }} />
           </div>
         </div>
       </div>
@@ -132,49 +132,49 @@ export function LineItemBreakdown({ items }: { items: LineItemDecision[] }) {
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Line Item Breakdown</h4>
-      <div className="border rounded-lg overflow-hidden">
+      <h4 className="text-xs font-semibold text-[#87867f] uppercase tracking-wider">Line Item Breakdown</h4>
+      <div className="border border-[#e8e6dc] rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-muted/50">
-              <th className="text-left p-3 font-medium text-xs uppercase">Item</th>
-              <th className="text-left p-3 font-medium text-xs uppercase">Category</th>
-              <th className="text-right p-3 font-medium text-xs uppercase">Claimed</th>
-              <th className="text-right p-3 font-medium text-xs uppercase">Approved</th>
-              <th className="text-center p-3 font-medium text-xs uppercase">Status</th>
+            <tr className="bg-[#f0eee6]">
+              <th className="text-left p-3 font-medium text-xs uppercase text-[#5e5d59]">Item</th>
+              <th className="text-left p-3 font-medium text-xs uppercase text-[#5e5d59]">Category</th>
+              <th className="text-right p-3 font-medium text-xs uppercase text-[#5e5d59]">Claimed</th>
+              <th className="text-right p-3 font-medium text-xs uppercase text-[#5e5d59]">Approved</th>
+              <th className="text-center p-3 font-medium text-xs uppercase text-[#5e5d59]">Status</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, i) => (
-              <tr key={i} className={`border-t ${item.status === 'rejected' ? 'bg-red-50/60' : item.status === 'reduced' ? 'bg-amber-50/60' : ''}`}>
+              <tr key={i} className={`border-t border-[#e8e6dc] ${item.status === 'rejected' ? 'bg-[#b53333]/5' : item.status === 'reduced' ? 'bg-amber-600/5' : 'bg-[#faf9f5]'}`}>
                 <td className="p-3">
-                  <div className="font-medium">{item.description}</div>
-                  {item.reason && <div className="text-xs text-red-600 mt-0.5">{item.reason}</div>}
+                  <div className="font-medium text-[#4d4c48]">{item.description}</div>
+                  {item.reason && <div className="text-xs text-[#b53333] mt-0.5">{item.reason}</div>}
                 </td>
                 <td className="p-3">
-                  <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                  <Badge variant="secondary" className="text-xs bg-[#f0eee6] text-[#5e5d59] border-[#e8e6dc]">{item.category}</Badge>
                 </td>
-                <td className="p-3 text-right font-mono">₹{item.claimed_amount.toLocaleString()}</td>
+                <td className="p-3 text-right font-mono text-[#4d4c48]">₹{item.claimed_amount.toLocaleString()}</td>
                 <td className="p-3 text-right font-mono font-semibold">
                   {item.status === 'rejected' ? (
-                    <span className="text-red-600 line-through">₹0</span>
+                    <span className="text-[#b53333] line-through">₹0</span>
                   ) : (
-                    <span className="text-emerald-600">₹{item.approved_amount.toLocaleString()}</span>
+                    <span className="text-[#27a644]">₹{item.approved_amount.toLocaleString()}</span>
                   )}
                 </td>
                 <td className="p-3 text-center">
-                  {item.status === 'approved' && <span className="text-emerald-600 font-bold">✅</span>}
-                  {item.status === 'rejected' && <span className="text-red-600 font-bold">❌</span>}
-                  {item.status === 'reduced' && <span className="text-amber-600 font-bold">⚠️</span>}
+                  {item.status === 'approved' && <span className="text-[#27a644] font-bold">✅</span>}
+                  {item.status === 'rejected' && <span className="text-[#b53333] font-bold">❌</span>}
+                  {item.status === 'reduced' && <span className="text-amber-700 font-bold">⚠️</span>}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 bg-muted/30">
-              <td colSpan={2} className="p-3 font-semibold">Total</td>
-              <td className="p-3 text-right font-mono font-semibold">₹{total.toLocaleString()}</td>
-              <td className="p-3 text-right font-mono font-bold text-emerald-700">₹{approved.toLocaleString()}</td>
+            <tr className="border-t-2 border-[#e8e6dc] bg-[#f0eee6]">
+              <td colSpan={2} className="p-3 font-semibold text-[#4d4c48]">Total</td>
+              <td className="p-3 text-right font-mono font-semibold text-[#4d4c48]">₹{total.toLocaleString()}</td>
+              <td className="p-3 text-right font-mono font-bold text-[#27a644]">₹{approved.toLocaleString()}</td>
               <td />
             </tr>
           </tfoot>
@@ -193,7 +193,7 @@ export function AmountWaterfall({ steps }: { steps: WaterfallStep[] }) {
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount Breakdown</h4>
+      <h4 className="text-xs font-semibold text-[#87867f] uppercase tracking-wider">Amount Breakdown</h4>
       <div className="space-y-2">
         {steps.map((step, i) => {
           const pct = maxAmount > 0 ? Math.abs(step.amount) / maxAmount * 100 : 0;
@@ -202,15 +202,15 @@ export function AmountWaterfall({ steps }: { steps: WaterfallStep[] }) {
 
           return (
             <div key={i} className="flex items-center gap-3">
-              <div className="w-32 text-xs text-right text-muted-foreground shrink-0">{step.label}</div>
-              <div className="flex-1 h-7 bg-gray-100 rounded-md overflow-hidden relative">
+              <div className="w-32 text-xs text-right text-[#87867f] shrink-0">{step.label}</div>
+              <div className="flex-1 h-7 bg-[#f0eee6] rounded-md overflow-hidden relative">
                 <div
                   className={`h-full rounded-md transition-all duration-500 ${
-                    isTotal ? 'bg-emerald-500' : isDeduction ? 'bg-red-400' : 'bg-blue-500'
+                    isTotal ? 'bg-[#27a644]' : isDeduction ? 'bg-[#b53333]' : 'bg-[#c96442]'
                   }`}
                   style={{ width: `${Math.max(pct, 2)}%` }}
                 />
-                <span className={`absolute inset-y-0 flex items-center text-xs font-bold px-2 ${pct > 30 ? 'text-white' : 'text-foreground'}`}
+                <span className={`absolute inset-y-0 flex items-center text-xs font-bold px-2 ${pct > 30 ? 'text-white' : 'text-[#4d4c48]'}`}
                   style={{ left: pct > 30 ? '4px' : `${pct + 2}%` }}>
                   {isDeduction ? '-' : ''}₹{Math.abs(step.amount).toLocaleString()}
                 </span>
@@ -230,14 +230,14 @@ export function CounterfactualsList({ items }: { items: Counterfactual[] }) {
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">💡 What Could Change This Decision</h4>
+      <h4 className="text-xs font-semibold text-[#87867f] uppercase tracking-wider">💡 What Could Change This Decision</h4>
       <div className="space-y-2">
         {items.map((cf, i) => (
-          <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100">
+          <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-[#c96442]/8 border border-[#c96442]/20">
             <span className="text-lg">{cf.icon}</span>
             <div>
-              <p className="text-sm font-medium">{cf.condition}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">→ {cf.result}</p>
+              <p className="text-sm font-medium text-[#4d4c48]">{cf.condition}</p>
+              <p className="text-xs text-[#87867f] mt-0.5">→ {cf.result}</p>
             </div>
           </div>
         ))}
@@ -253,10 +253,10 @@ export function PolicyReferences({ refs }: { refs: string[] }) {
 
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">📜 Policy Sections Evaluated</h4>
+      <h4 className="text-xs font-semibold text-[#87867f] uppercase tracking-wider">📜 Policy Sections Evaluated</h4>
       <div className="flex flex-wrap gap-1.5">
         {refs.map((ref, i) => (
-          <Badge key={i} variant="outline" className="text-xs font-normal bg-violet-50 border-violet-200 text-violet-700">
+          <Badge key={i} variant="outline" className="text-xs font-normal bg-[#c96442]/10 border-[#c96442]/30 text-[#c96442]">
             {ref}
           </Badge>
         ))}

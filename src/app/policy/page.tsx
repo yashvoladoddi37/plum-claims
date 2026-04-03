@@ -26,9 +26,9 @@ interface QAResult {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  policy_terms: "bg-blue-100 text-blue-800 border-blue-200",
-  adjudication_rules: "bg-violet-100 text-violet-800 border-violet-200",
-  medical_knowledge: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  policy_terms: "bg-[#c96442]/15 text-[#c96442] border-[#c96442]/30",
+  adjudication_rules: "bg-[#8b6f4e]/15 text-[#8b6f4e] border-[#8b6f4e]/30",
+  medical_knowledge: "bg-[#5a7a5a]/15 text-[#5a7a5a] border-[#5a7a5a]/30",
 };
 
 const SOURCE_ICONS: Record<string, string> = {
@@ -54,9 +54,9 @@ function renderMarkdown(text: string) {
     if (match[1]) {
       parts.push(<strong key={key++}>{match[1]}</strong>);
     } else if (match[2]) {
-      parts.push(<code key={key++} className="block bg-muted px-3 py-2 rounded text-xs font-mono my-1 whitespace-pre-wrap">{match[2].trim()}</code>);
+      parts.push(<code key={key++} className="block bg-[#f0eee6] px-3 py-2 rounded text-xs font-mono my-1 whitespace-pre-wrap">{match[2].trim()}</code>);
     } else if (match[3]) {
-      parts.push(<code key={key++} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{match[3]}</code>);
+      parts.push(<code key={key++} className="bg-[#f0eee6] px-1 py-0.5 rounded text-xs font-mono">{match[3]}</code>);
     }
 
     lastIndex = match.index + match[0].length;
@@ -158,11 +158,11 @@ export default function PolicyExplorer() {
   const filteredChunks = kbFilter === "all" ? chunks : chunks.filter(c => c.source === kbFilter);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-[#faf9f5] min-h-screen">
       {/* Header — centered */}
       <div className="text-center pt-4">
-        <h1 className="text-3xl font-bold tracking-tight">Policy Explorer</h1>
-        <p className="text-muted-foreground text-sm mt-2 max-w-lg mx-auto">
+        <h1 className="text-3xl font-semibold tracking-tight text-[#141413]">Policy Explorer</h1>
+        <p className="text-[#5e5d59] text-sm mt-2 max-w-lg mx-auto">
           Browse the RAG knowledge base, search policy terms, or ask natural language questions
         </p>
       </div>
@@ -170,34 +170,34 @@ export default function PolicyExplorer() {
       {/* Stats — centered row */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-4xl mx-auto">
-          <Card className="border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-[#c96442] bg-[#faf9f5]">
             <CardContent className="pt-4 pb-4 text-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Chunks</div>
-              <div className="text-3xl font-bold">{stats.totalChunks}</div>
+              <div className="text-xs text-[#5e5d59] uppercase tracking-wider mb-1">Total Chunks</div>
+              <div className="text-3xl font-semibold text-[#141413]">{stats.totalChunks}</div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-blue-400">
+          <Card className="border-l-4 border-l-[#c96442] bg-[#faf9f5]">
             <CardContent className="pt-4 pb-4 text-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">📋 Policy Terms</div>
-              <div className="text-3xl font-bold">{stats.bySource.policy_terms || 0}</div>
+              <div className="text-xs text-[#5e5d59] uppercase tracking-wider mb-1">📋 Policy Terms</div>
+              <div className="text-3xl font-semibold text-[#141413]">{stats.bySource.policy_terms || 0}</div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-violet-400">
+          <Card className="border-l-4 border-l-[#8b6f4e] bg-[#faf9f5]">
             <CardContent className="pt-4 pb-4 text-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">⚖️ Rules</div>
-              <div className="text-3xl font-bold">{stats.bySource.adjudication_rules || 0}</div>
+              <div className="text-xs text-[#5e5d59] uppercase tracking-wider mb-1">⚖️ Rules</div>
+              <div className="text-3xl font-semibold text-[#141413]">{stats.bySource.adjudication_rules || 0}</div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-emerald-400">
+          <Card className="border-l-4 border-l-[#5a7a5a] bg-[#faf9f5]">
             <CardContent className="pt-4 pb-4 text-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">🏥 Medical</div>
-              <div className="text-3xl font-bold">{stats.bySource.medical_knowledge || 0}</div>
+              <div className="text-xs text-[#5e5d59] uppercase tracking-wider mb-1">🏥 Medical</div>
+              <div className="text-3xl font-semibold text-[#141413]">{stats.bySource.medical_knowledge || 0}</div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-purple-400">
+          <Card className="border-l-4 border-l-[#87867f] bg-[#faf9f5]">
             <CardContent className="pt-4 pb-4 text-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Embeddings</div>
-              <div className="text-2xl font-bold">{stats.embeddingsLoaded ? "✅ Active" : "⚠️ Keywords"}</div>
+              <div className="text-xs text-[#5e5d59] uppercase tracking-wider mb-1">Embeddings</div>
+              <div className="text-2xl font-semibold text-[#141413]">{stats.embeddingsLoaded ? "✅ Active" : "⚠️ Keywords"}</div>
             </CardContent>
           </Card>
         </div>
@@ -205,12 +205,11 @@ export default function PolicyExplorer() {
 
       {/* ====== ASK ABOUT YOUR POLICY — Hero Section ====== */}
       <div className="max-w-3xl mx-auto">
-        <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50/80 to-blue-50/80 shadow-lg">
+        <Card className="border-2 border-[#c96442]/30 bg-gradient-to-br from-[#c96442]/5 to-[#d97757]/5 shadow-lg">
           <CardContent className="pt-8 pb-8 px-8">
             <div className="text-center space-y-4">
-              <div className="text-4xl">🤖</div>
-              <h2 className="text-2xl font-bold tracking-tight">Ask About Your Policy</h2>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              <h2 className="text-2xl font-semibold tracking-tight text-[#141413]">Ask About Your Policy</h2>
+              <p className="text-[#5e5d59] text-sm max-w-md mx-auto">
                 Ask questions in natural language — the AI will answer using the RAG knowledge base
               </p>
 
@@ -218,7 +217,7 @@ export default function PolicyExplorer() {
               <div className="flex flex-wrap justify-center gap-2 pt-2">
                 {SAMPLE_QUESTIONS.map((q, i) => (
                   <button key={i} onClick={() => handleAsk(q)}
-                    className="text-xs px-3 py-1.5 rounded-full border bg-white/80 hover:bg-purple-50 hover:border-purple-300 transition-all shadow-sm">
+                    className="text-xs px-3 py-1.5 rounded-full border border-[#e8e6dc] bg-[#faf9f5] hover:bg-[#f0eee6] hover:border-[#c96442]/30 transition-all shadow-sm text-[#4d4c48]">
                     {q}
                   </button>
                 ))}
@@ -226,10 +225,10 @@ export default function PolicyExplorer() {
 
               {/* Input — centered */}
               <form onSubmit={(e) => { e.preventDefault(); handleAsk(); }} className="flex gap-2 max-w-xl mx-auto pt-2">
-                <input className="flex-1 border rounded-lg px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-300" type="text"
+                <input className="flex-1 border border-[#e8e6dc] rounded-lg px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c96442]/30 focus:border-[#c96442]/30 bg-[#faf9f5] text-[#141413] placeholder:text-[#87867f]" type="text"
                   value={question} onChange={e => setQuestion(e.target.value)}
                   placeholder="Ask anything about your insurance policy..." />
-                <Button type="submit" disabled={asking || !question.trim()} className="px-6">
+                <Button type="submit" disabled={asking || !question.trim()} className="px-6 bg-[#c96442] hover:bg-[#d97757] text-white">
                   {asking ? "Thinking..." : "Ask"}
                 </Button>
               </form>
@@ -238,19 +237,19 @@ export default function PolicyExplorer() {
             {/* Answer */}
             {qaResult && (
               <div className="space-y-3 mt-6">
-                <div className="p-5 rounded-xl bg-white border shadow-sm">
-                  <div className="text-xs text-muted-foreground mb-2 font-medium text-center">💬 {qaResult.question}</div>
-                  <div className="text-sm leading-relaxed whitespace-pre-line">{renderMarkdown(qaResult.answer)}</div>
+                <div className="p-5 rounded-xl bg-[#faf9f5] border border-[#e8e6dc] shadow-sm">
+                  <div className="text-xs text-[#5e5d59] mb-2 font-medium text-center">💬 {qaResult.question}</div>
+                  <div className="text-sm leading-relaxed whitespace-pre-line text-[#141413]">{renderMarkdown(qaResult.answer)}</div>
                 </div>
                 {qaResult.sources?.length > 0 && (
                   <div>
-                    <div className="text-xs text-muted-foreground mb-2 text-center">Sources used</div>
+                    <div className="text-xs text-[#5e5d59] mb-2 text-center">Sources used</div>
                     <div className="space-y-1">
                       {qaResult.sources.slice(0, 3).map((s, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-white/60 border">
+                        <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-[#faf9f5] border border-[#e8e6dc]">
                           <Badge className={`text-xs ${SOURCE_COLORS[s.source] || ""}`}>{s.source}</Badge>
-                          <span className="text-muted-foreground truncate flex-1">{s.text.slice(0, 100)}...</span>
-                          <span className="font-mono text-muted-foreground">{(s.similarity * 100).toFixed(0)}%</span>
+                          <span className="text-[#5e5d59] truncate flex-1">{s.text.slice(0, 100)}...</span>
+                          <span className="font-mono text-[#5e5d59]">{(s.similarity * 100).toFixed(0)}%</span>
                         </div>
                       ))}
                     </div>
@@ -263,22 +262,22 @@ export default function PolicyExplorer() {
       </div>
 
       {/* Semantic Search */}
-      <Card className="max-w-4xl mx-auto">
+      <Card className="max-w-4xl mx-auto bg-[#faf9f5] border-[#e8e6dc]">
         <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2">🔍 Semantic Search</CardTitle>
-          <p className="text-xs text-muted-foreground">Find relevant policy sections using semantic similarity</p>
+          <CardTitle className="flex items-center justify-center gap-2 text-[#141413]">🔍 Semantic Search</CardTitle>
+          <p className="text-xs text-[#5e5d59]">Find relevant policy sections using semantic similarity</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSearch} className="flex gap-2">
-            <select className="border rounded px-3 py-2 text-sm" value={searchSourceFilter} onChange={e => setSearchSourceFilter(e.target.value)}>
+            <select className="border border-[#e8e6dc] rounded px-3 py-2 text-sm bg-[#faf9f5] text-[#141413]" value={searchSourceFilter} onChange={e => setSearchSourceFilter(e.target.value)}>
               <option value="all">All Sources</option>
               <option value="policy_terms">📋 Policy Terms</option>
               <option value="adjudication_rules">⚖️ Adjudication Rules</option>
               <option value="medical_knowledge">🏥 Medical Knowledge</option>
             </select>
-            <input className="flex-1 border rounded px-4 py-2 text-sm" type="text" value={searchQuery}
+            <input className="flex-1 border border-[#e8e6dc] rounded px-4 py-2 text-sm bg-[#faf9f5] text-[#141413] placeholder:text-[#87867f]" type="text" value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)} placeholder="Search: dental coverage, MRI pre-auth, waiting period..." />
-            <Button type="submit" variant="outline" disabled={searching}>
+            <Button type="submit" variant="outline" disabled={searching} className="border-[#e8e6dc] text-[#4d4c48] hover:bg-[#f0eee6]">
               {searching ? "Searching..." : "Search"}
             </Button>
           </form>
@@ -286,16 +285,16 @@ export default function PolicyExplorer() {
           {searchResults.length > 0 && (
             <div className="space-y-2">
               {searchResults.map((r, i) => (
-                <div key={i} className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                <div key={i} className="p-3 rounded-lg border border-[#e8e6dc] bg-[#faf9f5] hover:bg-[#f0eee6] transition-colors">
                   <div className="flex items-center gap-2 mb-1">
                     <span>{SOURCE_ICONS[r.source] || "📄"}</span>
                     <Badge className={`text-xs ${SOURCE_COLORS[r.source] || ""}`}>{r.source}</Badge>
-                    <Badge variant="secondary" className="text-xs">{r.category}</Badge>
-                    <span className="text-xs text-muted-foreground ml-auto font-mono font-bold">
+                    <Badge variant="secondary" className="text-xs bg-[#f0eee6] text-[#4d4c48]">{r.category}</Badge>
+                    <span className="text-xs text-[#5e5d59] ml-auto font-mono font-semibold">
                       {(r.similarity * 100).toFixed(0)}% match
                     </span>
                   </div>
-                  <p className="text-sm leading-relaxed">{renderMarkdown(r.text)}</p>
+                  <p className="text-sm leading-relaxed text-[#141413]">{renderMarkdown(r.text)}</p>
                 </div>
               ))}
             </div>
@@ -304,26 +303,26 @@ export default function PolicyExplorer() {
       </Card>
 
       {/* Knowledge Base Browser */}
-      <Card className="max-w-4xl mx-auto">
+      <Card className="max-w-4xl mx-auto bg-[#faf9f5] border-[#e8e6dc]">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>📚 Knowledge Base</CardTitle>
+            <CardTitle className="text-[#141413]">📚 Knowledge Base</CardTitle>
             <div className="flex gap-1">
               {["all", "policy_terms", "adjudication_rules", "medical_knowledge"].map(s => (
-                <Button key={s} variant={kbFilter === s ? "default" : "outline"} className="text-xs h-7 px-2"
+                <Button key={s} variant={kbFilter === s ? "default" : "outline"} className={`text-xs h-7 px-2 ${kbFilter === s ? "bg-[#c96442] hover:bg-[#d97757] text-white" : "border-[#e8e6dc] text-[#4d4c48] hover:bg-[#f0eee6]"}`}
                   onClick={() => setKbFilter(s)}>
                   {s === "all" ? "All" : s === "policy_terms" ? "📋 Policy" : s === "adjudication_rules" ? "⚖️ Rules" : "🏥 Medical"}
                 </Button>
               ))}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">Click on any chunk to expand its full content. {filteredChunks.length} chunks shown.</p>
+          <p className="text-xs text-[#5e5d59]">Click on any chunk to expand its full content. {filteredChunks.length} chunks shown.</p>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="animate-pulse bg-muted rounded h-12" />)}</div>
+            <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="animate-pulse bg-[#f0eee6] rounded h-12" />)}</div>
           ) : filteredChunks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-[#5e5d59]">
               <p className="text-lg mb-1">No chunks found</p>
               <p className="text-sm">No knowledge chunks available for this source filter.</p>
             </div>
@@ -335,18 +334,18 @@ export default function PolicyExplorer() {
                   <button
                     key={chunk.id}
                     onClick={() => toggleChunk(chunk.id)}
-                    className="w-full text-left p-3 rounded-lg border hover:bg-muted/30 hover:shadow-sm transition-all text-sm"
+                    className="w-full text-left p-3 rounded-lg border border-[#e8e6dc] hover:bg-[#f0eee6] hover:shadow-sm transition-all text-sm"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-xs text-muted-foreground">{chunk.id}</span>
+                      <span className="font-mono text-xs text-[#5e5d59]">{chunk.id}</span>
                       <Badge className={`text-xs ${SOURCE_COLORS[chunk.source] || ""}`}>{chunk.source}</Badge>
-                      <Badge variant="secondary" className="text-xs">{chunk.category}</Badge>
-                      <span className="text-xs text-muted-foreground ml-auto">{isExpanded ? '▲' : '▼'}</span>
+                      <Badge variant="secondary" className="text-xs bg-[#f0eee6] text-[#4d4c48]">{chunk.category}</Badge>
+                      <span className="text-xs text-[#5e5d59] ml-auto">{isExpanded ? '▲' : '▼'}</span>
                     </div>
                     {isExpanded ? (
-                      <p className="text-sm leading-relaxed mt-2 whitespace-pre-wrap">{renderMarkdown(chunk.text)}</p>
+                      <p className="text-sm leading-relaxed mt-2 whitespace-pre-wrap text-[#141413]">{renderMarkdown(chunk.text)}</p>
                     ) : (
-                      <p className="text-muted-foreground text-xs truncate">{chunk.textPreview}</p>
+                      <p className="text-[#5e5d59] text-xs truncate">{chunk.textPreview}</p>
                     )}
                   </button>
                 );
@@ -358,13 +357,13 @@ export default function PolicyExplorer() {
 
       {/* Q&A History */}
       {qaHistory.length > 1 && (
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader><CardTitle className="text-sm text-center">💬 Previous Questions</CardTitle></CardHeader>
+        <Card className="max-w-4xl mx-auto bg-[#faf9f5] border-[#e8e6dc]">
+          <CardHeader><CardTitle className="text-sm text-center text-[#141413]">💬 Previous Questions</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {qaHistory.slice(1).map((qa, i) => (
-              <div key={i} className="p-3 rounded-lg bg-muted/30 border text-sm">
-                <p className="font-medium text-xs text-muted-foreground">Q: {qa.question}</p>
-                <p className="mt-1">{qa.answer}</p>
+              <div key={i} className="p-3 rounded-lg bg-[#f0eee6] border border-[#e8e6dc] text-sm">
+                <p className="font-medium text-xs text-[#5e5d59]">Q: {qa.question}</p>
+                <p className="mt-1 text-[#141413]">{qa.answer}</p>
               </div>
             ))}
           </CardContent>

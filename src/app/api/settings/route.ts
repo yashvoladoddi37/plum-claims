@@ -2,27 +2,47 @@
 // POST /api/settings — Update API key at runtime
 
 import { NextRequest } from 'next/server';
-import { isGroqAvailable, groqGenerate } from '@/lib/ai/groq';
+import { isGroqAvailable, groqGenerate, GROQ_MODEL } from '@/lib/ai/groq';
+import { isAIAvailable, getApiKeyInfo } from '@/lib/ai/gemini';
 
 export const dynamic = 'force-dynamic';
 
-function getKeyInfo(): { configured: boolean; source: 'env' | 'none'; maskedKey: string | null } {
-  const key = process.env.GROQ_API_KEY;
-  if (key) {
-    return {
-      configured: true,
-      source: 'env',
-      maskedKey: key.slice(0, 4) + '••••' + key.slice(-4),
-    };
-  }
-  return { configured: false, source: 'none', maskedKey: null };
+function getGroqKeysInfo() {
+  const keys = [
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+  ];
+  const configured = keys.filter(Boolean);
+  return {
+    configured: configured.length > 0,
+    count: configured.length,
+    maskedKeys: configured.map((k) => k!.slice(0, 4) + '••••' + k!.slice(-4)),
+  };
 }
 
 export async function GET() {
-  const keyInfo = getKeyInfo();
+  const groqInfo = getGroqKeysInfo();
+  const geminiInfo = getApiKeyInfo();
   return Response.json({
-    ai_available: isGroqAvailable(),
-    ...keyInfo,
+    groq: {
+      available: isGroqAvailable(),
+      model: GROQ_MODEL,
+      keyCount: groqInfo.count,
+      maskedKeys: groqInfo.maskedKeys,
+    },
+    gemini: {
+      available: isAIAvailable(),
+      source: geminiInfo.source,
+      maskedKey: geminiInfo.maskedKey,
+    },
+    embeddings: {
+      model: 'all-MiniLM-L6-v2 (local)',
+      status: 'active',
+    },
+    database: {
+      url: process.env.TURSO_DATABASE_URL === 'file:local.db' ? 'SQLite (local file)' : 'Turso Cloud',
+    },
   });
 }
 
@@ -36,8 +56,6 @@ export async function POST(request: NextRequest) {
       return Response.json({
         success: true,
         message: 'Groq API key cleared.',
-        ai_available: isGroqAvailable(),
-        ...getKeyInfo(),
       });
     }
 
@@ -57,7 +75,6 @@ export async function POST(request: NextRequest) {
       const text = await groqGenerate('Respond with exactly: OK', { maxOutputTokens: 10 });
       if (!text) throw new Error('Empty response from Groq');
     } catch (err) {
-      // Revert key on failure
       if (prevKey) process.env.GROQ_API_KEY = prevKey;
       else delete process.env.GROQ_API_KEY;
       return Response.json(
@@ -69,8 +86,6 @@ export async function POST(request: NextRequest) {
     return Response.json({
       success: true,
       message: 'Groq API key configured and verified!',
-      ai_available: true,
-      ...getKeyInfo(),
     });
   } catch (error) {
     return Response.json(

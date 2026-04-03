@@ -77,19 +77,19 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">Configure AI features for claim adjudication</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#141413]">Settings</h1>
+        <p className="text-[#5e5d59] text-sm mt-1">Configure AI features for claim adjudication</p>
       </div>
 
       {/* Status Card */}
-      <Card>
+      <Card className="border-[#4d4c48]/20 bg-[#faf9f5]">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between text-[#141413]">
             <span>AI Status</span>
             {status && (
               <Badge className={status.ai_available
-                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                : "bg-red-100 text-red-800 border-red-200"
+                ? "bg-[#27a644]/15 text-[#27a644] border-[#27a644]/30"
+                : "bg-[#b53333]/10 text-[#b53333] border-[#b53333]/20"
               }>
                 {status.ai_available ? "✅ Active" : "❌ Inactive"}
               </Badge>
@@ -100,20 +100,20 @@ export default function SettingsPage() {
           {status ? (
             <>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">API Key</span>
-                  <p className="font-mono mt-0.5">{status.maskedKey || "Not configured"}</p>
+                <div><span className="text-[#5e5d59]">API Key</span>
+                  <p className="font-mono mt-0.5 text-[#141413]">{status.maskedKey || "Not configured"}</p>
                 </div>
-                <div><span className="text-muted-foreground">Source</span>
-                  <p className="mt-0.5">
+                <div><span className="text-[#5e5d59]">Source</span>
+                  <p className="mt-0.5 text-[#141413]">
                     {status.source === "runtime" && "🔧 Set via Settings"}
                     {status.source === "env" && "📁 Environment variable (.env.local)"}
                     {status.source === "none" && "—"}
                   </p>
                 </div>
               </div>
-              <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
-                <p className="font-medium">What AI features are enabled:</p>
-                <ul className="text-muted-foreground space-y-0.5 ml-4 list-disc">
+              <div className="bg-[#f0eee6] rounded-lg p-3 text-sm space-y-1">
+                <p className="font-medium text-[#141413]">What AI features are enabled:</p>
+                <ul className="text-[#5e5d59] space-y-0.5 ml-4 list-disc">
                   <li className={status.ai_available ? "" : "opacity-50"}>📄 Document extraction from uploaded images (Gemini Vision)</li>
                   <li className={status.ai_available ? "" : "opacity-50"}>🧠 Medical necessity review with RAG context</li>
                   <li className={status.ai_available ? "" : "opacity-50"}>📚 Semantic policy search (embeddings)</li>
@@ -125,21 +125,21 @@ export default function SettingsPage() {
               </div>
             </>
           ) : (
-            <div className="animate-pulse bg-muted rounded h-20" />
+            <div className="animate-pulse bg-[#f0eee6] rounded h-20" />
           )}
         </CardContent>
       </Card>
 
       {/* API Key Form */}
-      <Card>
+      <Card className="border-[#4d4c48]/20 bg-[#faf9f5]">
         <CardHeader>
-          <CardTitle>Gemini API Key</CardTitle>
+          <CardTitle className="text-[#141413]">Gemini API Key</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-            <p className="font-medium">🔑 How to get an API key:</p>
+          <div className="bg-[#c96442]/8 border border-[#c96442]/20 rounded-lg p-3 text-sm text-[#87867f]">
+            <p className="font-medium text-[#141413]">🔑 How to get an API key:</p>
             <ol className="list-decimal ml-5 mt-1 space-y-0.5">
-              <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline font-medium">Google AI Studio</a></li>
+              <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline font-medium text-[#c96442]">Google AI Studio</a></li>
               <li>Sign in with your Google account</li>
               <li>Click &quot;Create API Key&quot;</li>
               <li>Copy the key and paste it below</li>
@@ -148,26 +148,26 @@ export default function SettingsPage() {
 
           <form onSubmit={handleSaveKey} className="space-y-3">
             <div>
-              <Label htmlFor="api-key">API Key</Label>
+              <Label htmlFor="api-key" className="text-[#141413]">API Key</Label>
               <Input
                 id="api-key"
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="AIzaSy..."
-                className="font-mono mt-1"
+                className="font-mono mt-1 border-[#4d4c48]/20 bg-[#faf9f5]"
                 autoComplete="off"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-[#5e5d59] mt-1">
                 Your key is validated with a test API call and stored in server memory only (not persisted to disk).
               </p>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" disabled={loading || !apiKey.trim()} className="flex-1">
+              <Button type="submit" disabled={loading || !apiKey.trim()} className="flex-1 bg-[#c96442] hover:bg-[#d97757] text-white">
                 {loading ? "Validating..." : "Save & Verify Key"}
               </Button>
               {status?.source === "runtime" && (
-                <Button type="button" variant="outline" onClick={handleClearKey} disabled={loading}>
+                <Button type="button" variant="outline" onClick={handleClearKey} disabled={loading} className="border-[#4d4c48]/20 text-[#141413]">
                   Clear
                 </Button>
               )}
@@ -176,7 +176,7 @@ export default function SettingsPage() {
 
           {message && (
             <div className={`rounded-lg p-3 text-sm ${
-              message.type === "success" ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-red-50 text-red-800 border border-red-200"
+              message.type === "success" ? "bg-[#27a644]/15 text-[#27a644] border border-[#27a644]/30" : "bg-[#b53333]/10 text-[#b53333] border border-[#b53333]/20"
             }`}>
               {message.type === "success" ? "✅" : "❌"} {message.text}
             </div>
@@ -185,16 +185,16 @@ export default function SettingsPage() {
       </Card>
 
       {/* System Info */}
-      <Card>
+      <Card className="border-[#4d4c48]/20 bg-[#faf9f5]">
         <CardHeader>
-          <CardTitle className="text-sm">System Information</CardTitle>
+          <CardTitle className="text-sm text-[#141413]">System Information</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-muted-foreground">Generation Model</span><p className="font-mono mt-0.5">gemini-2.5-flash</p></div>
-            <div><span className="text-muted-foreground">Embedding Model</span><p className="font-mono mt-0.5">gemini-embedding-001</p></div>
-            <div><span className="text-muted-foreground">Database</span><p className="font-mono mt-0.5">SQLite (local)</p></div>
-            <div><span className="text-muted-foreground">RAG Knowledge Base</span><p className="font-mono mt-0.5">38 chunks (policy + medical)</p></div>
+            <div><span className="text-[#5e5d59]">Generation Model</span><p className="font-mono mt-0.5 text-[#141413]">gemini-2.5-flash</p></div>
+            <div><span className="text-[#5e5d59]">Embedding Model</span><p className="font-mono mt-0.5 text-[#141413]">gemini-embedding-001</p></div>
+            <div><span className="text-[#5e5d59]">Database</span><p className="font-mono mt-0.5 text-[#141413]">SQLite (local)</p></div>
+            <div><span className="text-[#5e5d59]">RAG Knowledge Base</span><p className="font-mono mt-0.5 text-[#141413]">38 chunks (policy + medical)</p></div>
           </div>
         </CardContent>
       </Card>

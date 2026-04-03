@@ -123,7 +123,14 @@ function synthesize(
       ?? coverageStep?.adjustments?.approved_amount
       ?? claim.claim_amount;
     const rejectedItems = coverageStep?.adjustments?.rejected_items || [];
-    notes.push(`Partial approval. Rejected items: ${rejectedItems.join(', ')}.`);
+    const noteParts: string[] = ['Partial approval.'];
+    if (rejectedItems.length > 0) {
+      noteParts.push(`Rejected items: ${rejectedItems.join(', ')}.`);
+    }
+    if (limitsStep?.decision_impact === 'PARTIAL') {
+      noteParts.push(limitsStep.details);
+    }
+    notes.push(noteParts.join(' '));
     nextSteps.push('The approved portion will be reimbursed. Excluded items cannot be claimed.');
   }
   // APPROVED

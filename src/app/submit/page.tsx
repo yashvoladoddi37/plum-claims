@@ -65,7 +65,7 @@ const TEST_DOCUMENTS: TestDocument[] = [
     type: "pdf",
     description: "Weight loss program — typically excluded from coverage",
     expectedOutcome: "REJECTED",
-    badgeColor: "bg-red-100 text-red-800",
+    badgeColor: "bg-[#b53333]/10 text-[#b53333]",
   },
   {
     name: "Pharmacy — Branded Drugs",
@@ -115,22 +115,22 @@ const AGENT_META: Record<string, { icon: string; name: string; description: stri
 };
 
 const STATUS_BG: Record<string, string> = {
-  APPROVED: "bg-emerald-50 border-emerald-300", REJECTED: "bg-red-50 border-red-300",
+  APPROVED: "bg-emerald-50 border-emerald-300", REJECTED: "bg-[#b53333]/5 border-[#b53333]/30",
   PARTIAL: "bg-amber-50 border-amber-300", MANUAL_REVIEW: "bg-orange-50 border-orange-300",
 };
 const STATUS_BADGE: Record<string, string> = {
-  APPROVED: "bg-emerald-100 text-emerald-800", REJECTED: "bg-red-100 text-red-800",
-  PARTIAL: "bg-amber-100 text-amber-800", MANUAL_REVIEW: "bg-orange-100 text-orange-800",
+  APPROVED: "bg-[#27a644]/15 text-[#27a644]", REJECTED: "bg-[#b53333]/10 text-[#b53333]",
+  PARTIAL: "bg-amber-600/10 text-amber-700", MANUAL_REVIEW: "bg-orange-500/10 text-orange-700",
 };
 const STATUS_ICON: Record<string, string> = {
   APPROVED: "✅", REJECTED: "❌", PARTIAL: "⚠️", MANUAL_REVIEW: "🔍",
 };
 
 function getAgentRecommendation(step: StepResult): { label: string; color: string } {
-  if (step.passed) return { label: 'PASS', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
-  if (step.decision_impact === 'REJECT') return { label: 'DENY', color: 'bg-red-100 text-red-800 border-red-300' };
-  if (step.decision_impact === 'PARTIAL') return { label: 'PARTIAL', color: 'bg-amber-100 text-amber-800 border-amber-300' };
-  return { label: 'REVIEW', color: 'bg-orange-100 text-orange-800 border-orange-300' };
+  if (step.passed) return { label: 'PASS', color: 'bg-[#27a644]/15 text-[#27a644] border-emerald-300' };
+  if (step.decision_impact === 'REJECT') return { label: 'DENY', color: 'bg-[#b53333]/10 text-[#b53333] border-[#b53333]/30' };
+  if (step.decision_impact === 'PARTIAL') return { label: 'PARTIAL', color: 'bg-amber-600/10 text-amber-700 border-amber-300' };
+  return { label: 'REVIEW', color: 'bg-orange-500/10 text-orange-700 border-orange-300' };
 }
 
 export default function SubmitClaim() {
@@ -222,31 +222,34 @@ export default function SubmitClaim() {
   const ragChunks = aiContext?.rag_chunks_used || [];
 
   return (
-    <div className="flex gap-6 max-w-7xl mx-auto">
+    <div className="flex gap-6 max-w-7xl mx-auto" style={{ background: '#faf9f5', minHeight: '100vh' }}>
       {/* ====== SIDEBAR — Test Documents ====== */}
       <div className={`shrink-0 transition-all duration-300 ${sidebarOpen ? "w-72" : "w-10"}`}>
         <div className="sticky top-4">
           {sidebarOpen ? (
-            <div className="rounded-xl border-2 border-primary/30 bg-card shadow-2xl ring-1 ring-primary/10">
-              <div className="p-4 pb-3 border-b">
+            <div className="rounded-xl border-2 border-[#c96442]/30 shadow-lg ring-1 ring-[#c96442]/10" style={{ background: '#faf9f5' }}>
+              <div className="p-4 pb-3 border-b border-[#e8e6dc]">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold flex items-center gap-2">
+                  <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: '#141413' }}>
                     🧪 Test Documents
                   </h3>
-                  <button onClick={() => setSidebarOpen(false)} className="text-muted-foreground hover:text-foreground text-xs p-1.5 rounded-md hover:bg-muted transition-colors">
+                  <button onClick={() => setSidebarOpen(false)} className="text-[#87867f] hover:text-[#141413] text-xs p-1.5 rounded-md hover:bg-[#f0eee6] transition-colors">
                     ✕
                   </button>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Pick sample docs to test the claim pipeline</p>
+                <p className="text-[11px] mt-1" style={{ color: '#5e5d59' }}>Pick sample docs to test the claim pipeline</p>
 
                 {/* Filter Tabs */}
-                <div className="flex gap-1 mt-3 p-0.5 bg-muted rounded-lg">
+                <div className="flex gap-1 mt-3 p-0.5 rounded-lg" style={{ background: '#f0eee6' }}>
                   {(["all", "pdf", "image"] as const).map((f) => (
                     <button key={f} onClick={() => setSidebarFilter(f)}
                       className={`flex-1 text-[11px] px-2 py-1.5 rounded-md font-medium transition-all
                         ${sidebarFilter === f
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"}`}
+                          ? "shadow-sm"
+                          : ""}`}
+                      style={sidebarFilter === f
+                        ? { background: '#faf9f5', color: '#141413', boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }
+                        : { color: '#5e5d59' }}
                     >
                       {f === "all" ? `All (${TEST_DOCUMENTS.length})` : f === "pdf" ? `📑 PDF (${TEST_DOCUMENTS.filter(d => d.type === "pdf").length})` : `🖼️ IMG (${TEST_DOCUMENTS.filter(d => d.type === "image").length})`}
                     </button>
@@ -260,19 +263,19 @@ export default function SubmitClaim() {
                   const isAdded = files.some(f => f.name === doc.filename);
                   return (
                     <div key={doc.filename}
-                      className={`rounded-lg border-2 p-3 transition-all
-                        ${isAdded
-                          ? "border-primary/40 bg-primary/5"
-                          : "border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20"}`}
+                      className="rounded-lg border-2 p-3 transition-all"
+                      style={isAdded
+                        ? { borderColor: 'rgba(201,100,66,0.4)', background: 'rgba(201,100,66,0.05)' }
+                        : { borderColor: 'transparent', background: '#f0eee6' }}
                     >
                       <div className="flex items-start gap-2.5">
                         <div className={`w-8 h-8 rounded-md flex items-center justify-center text-base shrink-0
-                          ${doc.type === "pdf" ? "bg-red-500/15 text-red-500" : "bg-blue-500/15 text-blue-500"}`}>
+                          ${doc.type === "pdf" ? "bg-[#b53333]/10 text-[#b53333]" : "bg-blue-500/15 text-blue-600"}`}>
                           {doc.type === "pdf" ? "📑" : "🖼️"}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-xs leading-tight">{doc.name}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{doc.description}</p>
+                          <p className="font-semibold text-xs leading-tight" style={{ color: '#141413' }}>{doc.name}</p>
+                          <p className="text-[10px] mt-0.5 line-clamp-2" style={{ color: '#5e5d59' }}>{doc.description}</p>
                           <div className="flex items-center gap-1.5 mt-2">
                             <Badge className={`text-[10px] px-1.5 py-0 ${doc.badgeColor}`}>
                               {doc.expectedOutcome}
@@ -280,16 +283,17 @@ export default function SubmitClaim() {
                             <div className="flex gap-1 ml-auto">
                               <button
                                 onClick={() => setPreviewDoc(previewDoc?.filename === doc.filename ? null : doc)}
-                                className="text-[10px] px-2 py-0.5 rounded-md bg-foreground/10 hover:bg-foreground/20 text-foreground font-bold transition-colors"
+                                className="text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors"
+                                style={{ background: 'rgba(20,20,19,0.08)', color: '#141413' }}
                               >
                                 {previewDoc?.filename === doc.filename ? "Hide" : "Preview it"}
                               </button>
                               {isAdded ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-primary/15 text-primary font-semibold">Added ✓</span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold" style={{ background: 'rgba(201,100,66,0.15)', color: '#c96442' }}>Added ✓</span>
                               ) : (
                                 <button
                                   onClick={() => addTestDocument(doc)}
-                                  className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 transition-colors font-semibold"
+                                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#27a644]/15 text-[#27a644] hover:bg-[#27a644]/25 transition-colors font-semibold"
                                 >
                                   + Add
                                 </button>
@@ -303,7 +307,7 @@ export default function SubmitClaim() {
                 })}
 
                 {/* Quick add all */}
-                <div className="pt-2 border-t mt-1">
+                <div className="pt-2 border-t border-[#e8e6dc] mt-1">
                   <Button
                     variant="outline"
                     size="sm"
@@ -321,7 +325,8 @@ export default function SubmitClaim() {
           ) : (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="w-10 h-10 rounded-lg border bg-card flex items-center justify-center hover:bg-muted transition-colors shadow-md"
+              className="w-10 h-10 rounded-lg border flex items-center justify-center hover:bg-[#f0eee6] transition-colors"
+              style={{ background: '#faf9f5', borderColor: '#e8e6dc', boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}
               title="Show test documents"
             >
               🧪
@@ -333,12 +338,12 @@ export default function SubmitClaim() {
       {/* ====== MAIN CONTENT ====== */}
       <div className="flex-1 min-w-0 space-y-6">
         <div className="text-center pt-4 relative">
-          <h1 className="text-2xl font-bold tracking-tight">Submit New Claim</h1>
-          <p className="text-muted-foreground text-sm mt-1">Upload documents or paste JSON — claim details are extracted automatically</p>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#141413' }}>Submit New Claim</h1>
+          <p className="text-sm mt-1" style={{ color: '#5e5d59' }}>Upload documents or paste JSON — claim details are extracted automatically</p>
           <Button
             variant="outline"
             size="sm"
-            className="absolute right-0 top-4 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            className="absolute right-0 top-4 text-xs text-[#b53333] border-[#b53333]/20 hover:bg-[#b53333]/5 hover:border-[#b53333]/30"
             onClick={async () => {
               if (!confirm('Delete all claims and start fresh?')) return;
               await fetch('/api/claims', { method: 'DELETE' });
@@ -356,8 +361,8 @@ export default function SubmitClaim() {
           <Card className="border-blue-200 bg-blue-50/30">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Preview: {previewDoc.name}</CardTitle>
-                <button onClick={() => setPreviewDoc(null)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted">Close</button>
+                <CardTitle className="text-sm" style={{ color: '#141413' }}>Preview: {previewDoc.name}</CardTitle>
+                <button onClick={() => setPreviewDoc(null)} className="text-xs px-2 py-1 rounded hover:bg-[#f0eee6]" style={{ color: '#5e5d59' }}>Close</button>
               </div>
             </CardHeader>
             <CardContent>
@@ -387,14 +392,15 @@ export default function SubmitClaim() {
                     onDragLeave={() => setDragActive(false)}
                     onDrop={handleDrop}
                     className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer
-                      ${dragActive ? "border-primary bg-primary/5 scale-[1.01]" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"}`}
+                      ${dragActive ? "border-[#c96442] scale-[1.01]" : "border-[#87867f]/25 hover:border-[#c96442]/50"}`}
+                    style={dragActive ? { background: 'rgba(201,100,66,0.05)' } : { background: '#faf9f5' }}
                     onClick={() => document.getElementById("file-input")?.click()}
                   >
                     <div className="flex flex-col items-center gap-3">
                       <div className="text-4xl">📎</div>
                       <div>
-                        <p className="font-semibold text-sm">Drop your bills, prescriptions, or medical documents here</p>
-                        <p className="text-xs text-muted-foreground mt-1">Supports images (JPG, PNG) and PDFs — claim details will be extracted automatically</p>
+                        <p className="font-semibold text-sm" style={{ color: '#141413' }}>Drop your bills, prescriptions, or medical documents here</p>
+                        <p className="text-xs mt-1" style={{ color: '#5e5d59' }}>Supports images (JPG, PNG) and PDFs — claim details will be extracted automatically</p>
                       </div>
                       <Button type="button" variant="outline" size="sm" className="mt-1">
                         Browse Files
@@ -414,22 +420,22 @@ export default function SubmitClaim() {
                   {files.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wider">{files.length} document{files.length > 1 ? "s" : ""} selected</Label>
+                        <Label className="text-xs uppercase tracking-wider" style={{ color: '#5e5d59' }}>{files.length} document{files.length > 1 ? "s" : ""} selected</Label>
                         <button type="button" onClick={() => setFiles([])}
-                          className="text-xs text-muted-foreground hover:text-red-500 transition-colors">
+                          className="text-xs hover:text-[#b53333] transition-colors" style={{ color: '#5e5d59' }}>
                           Clear all
                         </button>
                       </div>
                       <div className="space-y-1.5">
                         {files.map((file, i) => (
-                          <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border bg-muted/20 text-sm">
+                          <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border text-sm" style={{ background: '#f0eee6', borderColor: '#e8e6dc' }}>
                             <span className="text-lg">{file.type === "application/pdf" ? "📑" : "🖼️"}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{file.name}</p>
-                              <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+                              <p className="font-medium truncate" style={{ color: '#141413' }}>{file.name}</p>
+                              <p className="text-xs" style={{ color: '#5e5d59' }}>{(file.size / 1024).toFixed(1)} KB</p>
                             </div>
                             <button type="button" onClick={() => removeFile(i)}
-                              className="text-muted-foreground hover:text-red-500 transition-colors text-xs px-2 py-1 rounded hover:bg-red-50">
+                              className="text-xs px-2 py-1 rounded hover:bg-[#b53333]/5 transition-colors" style={{ color: '#5e5d59' }}>
                               Remove
                             </button>
                           </div>
@@ -448,7 +454,7 @@ export default function SubmitClaim() {
 
           <TabsContent value="json">
             <Card>
-              <CardHeader><CardTitle>JSON Claim Input</CardTitle></CardHeader>
+              <CardHeader><CardTitle style={{ color: '#141413' }}>JSON Claim Input</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleJsonSubmit} className="space-y-4">
                   <Textarea rows={12} value={jsonInput} onChange={(e) => setJsonInput(e.target.value)}
@@ -464,14 +470,14 @@ export default function SubmitClaim() {
 
         {/* ======== RESULT ======== */}
         {result && result.error && (
-          <Card className="border-red-300">
+          <Card className="border-[#b53333]/30">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">❌</span>
                 <div>
-                  <p className="font-semibold text-red-800">Error Processing Claim</p>
-                  <p className="text-sm text-red-600 mt-1">{String(result.error)}</p>
-                  {result.details && <p className="text-xs text-muted-foreground mt-2 font-mono">{String(result.details)}</p>}
+                  <p className="font-semibold text-[#b53333]">Error Processing Claim</p>
+                  <p className="text-sm mt-1" style={{ color: '#b53333' }}>{String(result.error)}</p>
+                  {result.details && <p className="text-xs mt-2 font-mono" style={{ color: '#5e5d59' }}>{String(result.details)}</p>}
                 </div>
               </div>
             </CardContent>
@@ -481,26 +487,26 @@ export default function SubmitClaim() {
         {result && status && !result.error && (
           <div className="space-y-5">
             {/* --- Decision Header --- */}
-            <div className={`rounded-xl border-2 p-6 ${STATUS_BG[status] || "bg-muted"}`}>
+            <div className={`rounded-xl border-2 p-6 ${STATUS_BG[status] || "bg-[#f0eee6]"}`}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-3xl">{STATUS_ICON[status] || "📋"}</span>
                     <Badge className={`text-lg px-4 py-1.5 ${STATUS_BADGE[status] || ""}`}>{status}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Claim <button className="font-mono font-semibold text-foreground hover:underline" onClick={() => router.push(`/claims/${result.claim_id}`)}>{String(result.claim_id)}</button>
+                  <p className="text-sm" style={{ color: '#5e5d59' }}>
+                    Claim <button className="font-mono font-semibold hover:underline" style={{ color: '#141413' }} onClick={() => router.push(`/claims/${result.claim_id}`)}>{String(result.claim_id)}</button>
                     {decision?.processing_time_ms != null && <span> · Processed in {String(decision.processing_time_ms)}ms</span>}
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Claimed</div>
-                  <div className="text-2xl font-bold font-mono">₹{Number(result.claim_amount || 0).toLocaleString()}</div>
+                  <div className="text-sm" style={{ color: '#5e5d59' }}>Claimed</div>
+                  <div className="text-2xl font-bold font-mono" style={{ color: '#141413' }}>₹{Number(result.claim_amount || 0).toLocaleString()}</div>
                   {decision?.approved_amount != null && Number(decision.approved_amount) > 0 && (
                     <div className="text-lg font-semibold text-emerald-700 mt-1">Approved: ₹{Number(decision.approved_amount).toLocaleString()}</div>
                   )}
                   {status === 'REJECTED' && (
-                    <div className="text-lg font-semibold text-red-700 mt-1">Approved: ₹0</div>
+                    <div className="text-lg font-semibold text-[#b53333] mt-1">Approved: ₹0</div>
                   )}
                 </div>
               </div>
@@ -514,21 +520,21 @@ export default function SubmitClaim() {
             {/* --- Quick Stats --- */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card><CardContent className="pt-4 text-center">
-                <div className="text-xs text-muted-foreground uppercase mb-1">Confidence</div>
-                <div className={`text-2xl font-bold ${Number(decision?.confidence_score) >= 0.9 ? "text-emerald-600" : Number(decision?.confidence_score) >= 0.7 ? "text-amber-600" : "text-red-600"}`}>
+                <div className="text-xs uppercase mb-1" style={{ color: '#5e5d59' }}>Confidence</div>
+                <div className={`text-2xl font-bold ${Number(decision?.confidence_score) >= 0.9 ? "text-emerald-600" : Number(decision?.confidence_score) >= 0.7 ? "text-amber-700" : "text-[#b53333]"}`}>
                   {decision?.confidence_score ? `${(Number(decision.confidence_score) * 100).toFixed(0)}%` : "—"}
                 </div>
               </CardContent></Card>
               <Card><CardContent className="pt-4 text-center">
-                <div className="text-xs text-muted-foreground uppercase mb-1">Processing</div>
-                <div className="text-2xl font-bold">{decision?.processing_time_ms ?? "—"}ms</div>
+                <div className="text-xs uppercase mb-1" style={{ color: '#5e5d59' }}>Processing</div>
+                <div className="text-2xl font-bold" style={{ color: '#141413' }}>{decision?.processing_time_ms ?? "—"}ms</div>
               </CardContent></Card>
               <Card><CardContent className="pt-4 text-center">
-                <div className="text-xs text-muted-foreground uppercase mb-1">Agents Run</div>
-                <div className="text-2xl font-bold">{pipeline.length}</div>
+                <div className="text-xs uppercase mb-1" style={{ color: '#5e5d59' }}>Agents Run</div>
+                <div className="text-2xl font-bold" style={{ color: '#141413' }}>{pipeline.length}</div>
               </CardContent></Card>
               <Card><CardContent className="pt-4 text-center">
-                <div className="text-xs text-muted-foreground uppercase mb-1">Agents Passed</div>
+                <div className="text-xs uppercase mb-1" style={{ color: '#5e5d59' }}>Agents Passed</div>
                 <div className="text-2xl font-bold text-emerald-600">{pipeline.filter(s => s.passed).length}/{pipeline.length}</div>
               </CardContent></Card>
             </div>
@@ -559,11 +565,11 @@ export default function SubmitClaim() {
             {/* --- Agent Pipeline Reasoning --- */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🤖 Agent Reasoning Pipeline
-                  <span className="text-sm font-normal text-muted-foreground">({pipeline.length} agents)</span>
+                <CardTitle className="flex items-center gap-2" style={{ color: '#141413' }}>
+                  Agent Reasoning Pipeline
+                  <span className="text-sm font-normal" style={{ color: '#5e5d59' }}>({pipeline.length} agents)</span>
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">Each agent independently analyzed the claim. Click to expand reasoning.</p>
+                <p className="text-xs" style={{ color: '#5e5d59' }}>Each agent independently analyzed the claim. Click to expand reasoning.</p>
               </CardHeader>
               <CardContent className="space-y-2">
                 {pipeline.map((step, i) => {
@@ -572,32 +578,32 @@ export default function SubmitClaim() {
                   const isExpanded = expandedAgents[step.step] ?? false;
 
                   return (
-                    <div key={i} className="rounded-lg border bg-card overflow-hidden transition-all hover:shadow-sm">
+                    <div key={i} className="rounded-lg border overflow-hidden transition-all hover:shadow-sm" style={{ background: '#faf9f5', borderColor: '#e8e6dc' }}>
                       <button
-                        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-muted/30 transition-colors"
+                        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-[#f0eee6]/50 transition-colors"
                         onClick={() => toggleAgent(step.step)}
                       >
                         <span className="text-xl">{meta.icon}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">{meta.name}</span>
-                            <span className="text-xs text-muted-foreground hidden sm:inline">— {meta.description}</span>
+                            <span className="font-semibold text-sm" style={{ color: '#141413' }}>{meta.name}</span>
+                            <span className="text-xs hidden sm:inline" style={{ color: '#5e5d59' }}>— {meta.description}</span>
                           </div>
                         </div>
                         <Badge className={`border text-xs font-bold ${rec.color}`}>{rec.label}</Badge>
-                        <span className="text-muted-foreground text-xs">{isExpanded ? '▲' : '▼'}</span>
+                        <span className="text-xs" style={{ color: '#5e5d59' }}>{isExpanded ? '▲' : '▼'}</span>
                       </button>
 
                       {isExpanded && (
-                        <div className="border-t px-4 pb-4 pt-3 space-y-3 bg-muted/10">
+                        <div className="border-t px-4 pb-4 pt-3 space-y-3" style={{ borderColor: '#e8e6dc', background: '#f0eee6' }}>
                           <div>
-                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Agent Reasoning</div>
-                            <p className="text-sm leading-relaxed">{step.details}</p>
+                            <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#5e5d59' }}>Agent Reasoning</div>
+                            <p className="text-sm leading-relaxed" style={{ color: '#4d4c48' }}>{step.details}</p>
                           </div>
 
                           {step.reasons.length > 0 && (
                             <div>
-                              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Rejection Codes</div>
+                              <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#5e5d59' }}>Rejection Codes</div>
                               <div className="flex gap-1 flex-wrap">
                                 {step.reasons.map((r, j) => <Badge key={j} variant="outline" className="text-xs font-mono">{r}</Badge>)}
                               </div>
@@ -606,7 +612,7 @@ export default function SubmitClaim() {
 
                           {step.adjustments && Object.keys(step.adjustments).length > 0 && (
                             <div>
-                              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Adjustments</div>
+                              <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#5e5d59' }}>Adjustments</div>
                               <div className="flex gap-2 flex-wrap">
                                 {Object.entries(step.adjustments).map(([k, v]) => (
                                   <Badge key={k} variant="secondary" className="text-xs font-mono">
@@ -627,8 +633,8 @@ export default function SubmitClaim() {
             {/* --- Decision Notes --- */}
             {decision?.notes && (
               <Card className="border-blue-200 bg-blue-50"><CardContent className="pt-4">
-                <p className="text-sm">💡 <strong>Decision Notes:</strong> {String(decision.notes)}</p>
-                {decision.next_steps && <p className="text-sm text-muted-foreground mt-1">➡️ {String(decision.next_steps)}</p>}
+                <p className="text-sm" style={{ color: '#4d4c48' }}>💡 <strong>Decision Notes:</strong> {String(decision.notes)}</p>
+                {decision.next_steps && <p className="text-sm mt-1" style={{ color: '#5e5d59' }}>➡️ {String(decision.next_steps)}</p>}
               </CardContent></Card>
             )}
 
@@ -643,20 +649,20 @@ export default function SubmitClaim() {
             {ragChunks.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">📚 RAG Knowledge Context <Badge variant="secondary">{ragChunks.length} chunks</Badge></CardTitle>
-                  <p className="text-xs text-muted-foreground">Policy knowledge and medical references used for AI decision-making</p>
+                  <CardTitle className="text-sm flex items-center gap-2" style={{ color: '#141413' }}>📚 RAG Knowledge Context <Badge variant="secondary">{ragChunks.length} chunks</Badge></CardTitle>
+                  <p className="text-xs" style={{ color: '#5e5d59' }}>Policy knowledge and medical references used for AI decision-making</p>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {ragChunks.map((chunk: { source: string; category: string; text: string; similarity: number }, i: number) => (
-                    <div key={i} className="p-3 rounded-lg bg-muted/40 border text-sm">
+                    <div key={i} className="p-3 rounded-lg border text-sm" style={{ background: '#f0eee6', borderColor: '#e8e6dc' }}>
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline" className="text-xs">{chunk.source}</Badge>
                         <Badge variant="secondary" className="text-xs">{chunk.category}</Badge>
-                        <span className="text-xs text-muted-foreground ml-auto font-mono">
+                        <span className="text-xs ml-auto font-mono" style={{ color: '#5e5d59' }}>
                           {typeof chunk.similarity === 'number' ? `${(chunk.similarity * 100).toFixed(0)}% match` : ''}
                         </span>
                       </div>
-                      <p className="text-xs leading-relaxed text-muted-foreground">{chunk.text}</p>
+                      <p className="text-xs leading-relaxed" style={{ color: '#5e5d59' }}>{chunk.text}</p>
                     </div>
                   ))}
                 </CardContent>
@@ -678,10 +684,10 @@ export default function SubmitClaim() {
             </div>
 
             <details className="text-sm">
-              <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors py-2">
+              <summary className="cursor-pointer hover:text-[#141413] transition-colors py-2" style={{ color: '#5e5d59' }}>
                 🔧 Raw JSON Response (technical)
               </summary>
-              <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto max-h-60 mt-2">{JSON.stringify(result, null, 2)}</pre>
+              <pre className="p-4 rounded-lg text-xs overflow-auto max-h-60 mt-2" style={{ background: '#f0eee6', color: '#4d4c48' }}>{JSON.stringify(result, null, 2)}</pre>
             </details>
           </div>
         )}

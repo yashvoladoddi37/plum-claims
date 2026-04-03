@@ -12,12 +12,12 @@ import {
 interface Claim { [key: string]: any; }
 
 const STATUS_COLORS: Record<string, string> = {
-  APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  REJECTED: "bg-red-100 text-red-800 border-red-200",
-  PARTIAL: "bg-amber-100 text-amber-800 border-amber-200",
-  MANUAL_REVIEW: "bg-orange-100 text-orange-800 border-orange-200",
-  PROCESSING: "bg-blue-100 text-blue-800 border-blue-200",
-  APPEALED: "bg-purple-100 text-purple-800 border-purple-200",
+  APPROVED: "bg-[#27a644]/15 text-[#27a644] border-[#27a644]/30",
+  REJECTED: "bg-[#b53333]/10 text-[#b53333] border-[#b53333]/30",
+  PARTIAL: "bg-amber-600/10 text-amber-700 border-amber-600/30",
+  MANUAL_REVIEW: "bg-orange-500/10 text-orange-700 border-orange-500/30",
+  PROCESSING: "bg-[#c96442]/10 text-[#c96442] border-[#c96442]/30",
+  APPEALED: "bg-purple-500/10 text-purple-700 border-purple-500/30",
 };
 
 const STATUS_ICONS: Record<string, string> = {
@@ -40,7 +40,7 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse bg-muted rounded ${className}`} />;
+  return <div className={`animate-pulse bg-[#f0eee6] rounded ${className}`} />;
 }
 
 export default function Dashboard() {
@@ -94,12 +94,12 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Claims Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1">AI-powered OPD claim adjudication with RAG-enhanced medical review</p>
+          <h1 className="text-[32px] font-medium tracking-[-0.5px] text-[#141413]">Claims Dashboard</h1>
+          <p className="text-[#87867f] text-[15px] mt-1">AI-powered OPD claim adjudication with RAG-enhanced medical review</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/policy"><Button variant="outline">📚 Policy Explorer</Button></Link>
-          <Link href="/submit"><Button>+ New Claim</Button></Link>
+          <Link href="/policy"><Button variant="outline" className="border-[#e8e6dc] text-[#4d4c48] hover:bg-[#f0eee6]">📚 Policy Explorer</Button></Link>
+          <Link href="/submit"><Button className="bg-[#c96442] hover:bg-[#d97757] text-[#faf9f5]">+ New Claim</Button></Link>
         </div>
       </div>
 
@@ -111,31 +111,31 @@ export default function Dashboard() {
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Total Claims</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold">{stats.total}</div></CardContent></Card>
-            <Card className="border-l-4 border-l-emerald-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Approved</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold text-emerald-600">{stats.approved}</div></CardContent></Card>
-            <Card className="border-l-4 border-l-red-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Rejected</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold text-red-600">{stats.rejected}</div></CardContent></Card>
-            <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Partial</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold text-amber-600">{stats.partial}</div></CardContent></Card>
-            <Card className="border-l-4 border-l-orange-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Manual Review</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold text-orange-600">{stats.manual}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)] border-l-4 border-l-[#c96442]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Total Claims</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-[#141413]">{stats.total}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)] border-l-4 border-l-[#27a644]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Approved</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-[#27a644]">{stats.approved}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)] border-l-4 border-l-[#b53333]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Rejected</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-[#b53333]">{stats.rejected}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)] border-l-4 border-l-[#d97757]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Partial</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-amber-700">{stats.partial}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)] border-l-4 border-l-orange-500"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Manual Review</CardTitle></CardHeader>
+              <CardContent><div className="text-3xl font-semibold text-orange-700">{stats.manual}</div></CardContent></Card>
           </div>
 
           {/* Stats Cards — Row 2 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Total Claimed</CardTitle></CardHeader>
-              <CardContent><div className="text-xl font-bold">₹{stats.totalAmount.toLocaleString()}</div></CardContent></Card>
-            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Total Approved</CardTitle></CardHeader>
-              <CardContent><div className="text-xl font-bold text-emerald-600">₹{stats.approvedAmount.toLocaleString()}</div></CardContent></Card>
-            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Avg Confidence</CardTitle></CardHeader>
-              <CardContent><div className={`text-xl font-bold ${stats.avgConfidence >= 0.9 ? "text-emerald-600" : stats.avgConfidence >= 0.7 ? "text-amber-600" : "text-red-600"}`}>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Total Claimed</CardTitle></CardHeader>
+              <CardContent><div className="text-xl font-semibold text-[#141413]">₹{stats.totalAmount.toLocaleString()}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Total Approved</CardTitle></CardHeader>
+              <CardContent><div className="text-xl font-semibold text-[#27a644]">₹{stats.approvedAmount.toLocaleString()}</div></CardContent></Card>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Avg Confidence</CardTitle></CardHeader>
+              <CardContent><div className={`text-xl font-semibold ${stats.avgConfidence >= 0.9 ? "text-[#27a644]" : stats.avgConfidence >= 0.7 ? "text-amber-700" : "text-[#b53333]"}`}>
                 {stats.total > 0 ? `${(stats.avgConfidence * 100).toFixed(0)}%` : "—"}</div></CardContent></Card>
-            <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Approval Rate</CardTitle></CardHeader>
-              <CardContent><div className="text-xl font-bold">{approvalRate}%</div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                  <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%` }} />
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]"><CardHeader className="pb-1"><CardTitle className="text-xs text-[#87867f] uppercase tracking-wider">Approval Rate</CardTitle></CardHeader>
+              <CardContent><div className="text-xl font-semibold text-[#141413]">{approvalRate}%</div>
+                <div className="w-full bg-[#f0eee6] rounded-full h-1.5 mt-2">
+                  <div className="bg-[#27a644] h-1.5 rounded-full" style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%` }} />
                 </div>
               </CardContent></Card>
           </div>
@@ -147,16 +147,16 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Rejection Reasons */}
           {sortedReasons.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Common Rejection Reasons</CardTitle></CardHeader>
+            <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]">
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-[#4d4c48]">Common Rejection Reasons</CardTitle></CardHeader>
               <CardContent className="space-y-2.5">
                 {sortedReasons.map(([reason, count]) => (
                   <div key={reason} className="flex items-center gap-3">
-                    <div className="w-28 text-xs text-muted-foreground text-right truncate">{REASON_LABELS[reason] || reason}</div>
-                    <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
-                      <div className="h-full bg-red-400 rounded transition-all" style={{ width: `${(count / maxReasonCount) * 100}%` }} />
+                    <div className="w-28 text-xs text-[#87867f] text-right truncate">{REASON_LABELS[reason] || reason}</div>
+                    <div className="flex-1 h-5 bg-[#f0eee6] rounded overflow-hidden">
+                      <div className="h-full bg-[#b53333]/40 rounded transition-all" style={{ width: `${(count / maxReasonCount) * 100}%` }} />
                     </div>
-                    <div className="w-6 text-xs font-mono font-bold text-right">{count}</div>
+                    <div className="w-6 text-xs font-mono font-semibold text-right text-[#4d4c48]">{count}</div>
                   </div>
                 ))}
               </CardContent>
@@ -164,25 +164,25 @@ export default function Dashboard() {
           )}
 
           {/* Status Distribution */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Decision Distribution</CardTitle></CardHeader>
+          <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]">
+            <CardHeader className="pb-2"><CardTitle className="text-sm text-[#4d4c48]">Decision Distribution</CardTitle></CardHeader>
             <CardContent>
               <div className="flex items-end gap-1 h-32 mb-2">
                 {[
-                  { key: 'APPROVED', count: stats.approved, color: 'bg-emerald-500', label: 'Approved' },
-                  { key: 'PARTIAL', count: stats.partial, color: 'bg-amber-500', label: 'Partial' },
-                  { key: 'REJECTED', count: stats.rejected, color: 'bg-red-500', label: 'Rejected' },
+                  { key: 'APPROVED', count: stats.approved, color: 'bg-[#27a644]', label: 'Approved' },
+                  { key: 'PARTIAL', count: stats.partial, color: 'bg-[#d97757]', label: 'Partial' },
+                  { key: 'REJECTED', count: stats.rejected, color: 'bg-[#b53333]', label: 'Rejected' },
                   { key: 'MANUAL_REVIEW', count: stats.manual, color: 'bg-orange-500', label: 'Review' },
                   { key: 'APPEALED', count: stats.appealed, color: 'bg-purple-500', label: 'Appealed' },
                 ].map(item => {
                   const pct = stats.total > 0 ? (item.count / stats.total) * 100 : 0;
                   return (
                     <div key={item.key} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-xs font-bold">{item.count}</span>
+                      <span className="text-xs font-semibold text-[#4d4c48]">{item.count}</span>
                       <div className="w-full relative" style={{ height: `${Math.max(pct, 4)}%` }}>
                         <div className={`w-full h-full ${item.color} rounded-t-md`} />
                       </div>
-                      <span className="text-xs text-muted-foreground">{item.label}</span>
+                      <span className="text-xs text-[#87867f]">{item.label}</span>
                     </div>
                   );
                 })}
@@ -193,13 +193,14 @@ export default function Dashboard() {
       )}
 
       {/* Claims Table */}
-      <Card>
+      <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle>Recent Claims</CardTitle>
+            <CardTitle className="text-[#141413]">Recent Claims</CardTitle>
             <div className="flex items-center gap-2">
               {["all", "APPROVED", "REJECTED", "PARTIAL", "MANUAL_REVIEW", "APPEALED"].map(s => (
-                <Button key={s} variant={statusFilter === s ? "default" : "ghost"} className="text-xs h-7 px-2"
+                <Button key={s} variant={statusFilter === s ? "default" : "ghost"}
+                  className={`text-xs h-7 px-2 ${statusFilter === s ? "bg-[#e8e6dc] text-[#141413] hover:bg-[#e8e6dc]" : "text-[#87867f] hover:text-[#5e5d59] hover:bg-transparent"}`}
                   onClick={() => setStatusFilter(s)}>
                   {s === "all" ? "All" : `${STATUS_ICONS[s] || ""} ${s.slice(0, 3)}`}
                 </Button>
@@ -213,39 +214,39 @@ export default function Dashboard() {
           ) : filteredClaims.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-4xl mb-3">📋</div>
-              <p className="text-muted-foreground mb-1">{statusFilter === "all" ? "No claims submitted yet" : `No ${statusFilter} claims`}</p>
-              <p className="text-sm text-muted-foreground mb-4">Submit a claim or run test cases to get started</p>
+              <p className="text-[#87867f] mb-1">{statusFilter === "all" ? "No claims submitted yet" : `No ${statusFilter} claims`}</p>
+              <p className="text-sm text-[#87867f] mb-4">Submit a claim or run test cases to get started</p>
               <div className="flex gap-2 justify-center">
-                <Link href="/submit"><Button>Submit Claim</Button></Link>
-                <Link href="/test-runner"><Button variant="outline">Run Tests</Button></Link>
+                <Link href="/submit"><Button className="bg-[#c96442] hover:bg-[#d97757] text-[#faf9f5]">Submit Claim</Button></Link>
+                <Link href="/test-runner"><Button variant="outline" className="border-[#e8e6dc] text-[#4d4c48] hover:bg-[#f0eee6]">Run Tests</Button></Link>
               </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-32">Claim ID</TableHead>
-                    <TableHead>Member</TableHead>
-                    <TableHead className="text-right">Claimed</TableHead>
-                    <TableHead className="text-right">Approved</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Confidence</TableHead>
-                    <TableHead>Date</TableHead>
+                  <TableRow className="border-[#f0eee6]">
+                    <TableHead className="w-32 text-[#87867f]">Claim ID</TableHead>
+                    <TableHead className="text-[#87867f]">Member</TableHead>
+                    <TableHead className="text-right text-[#87867f]">Claimed</TableHead>
+                    <TableHead className="text-right text-[#87867f]">Approved</TableHead>
+                    <TableHead className="text-[#87867f]">Status</TableHead>
+                    <TableHead className="text-right text-[#87867f]">Confidence</TableHead>
+                    <TableHead className="text-[#87867f]">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredClaims.map((claim) => (
-                    <TableRow key={claim.id} className="cursor-pointer group hover:bg-muted/50 transition-colors">
+                    <TableRow key={claim.id} className="cursor-pointer group hover:bg-[#f0eee6]/50 transition-colors border-[#f0eee6]">
                       <TableCell>
-                        <Link href={`/claims/${claim.id}`} className="font-mono text-sm text-violet-600 hover:underline group-hover:text-violet-800">
+                        <Link href={`/claims/${claim.id}`} className="font-mono text-sm text-[#c96442] hover:text-[#d97757] hover:underline">
                           {claim.id}
                         </Link>
                       </TableCell>
-                      <TableCell className="font-medium">{claim.member_name}</TableCell>
-                      <TableCell className="text-right font-mono">₹{claim.claim_amount?.toLocaleString()}</TableCell>
+                      <TableCell className="font-medium text-[#141413]">{claim.member_name}</TableCell>
+                      <TableCell className="text-right font-mono text-[#4d4c48]">₹{claim.claim_amount?.toLocaleString()}</TableCell>
                       <TableCell className="text-right font-mono font-medium">
-                        {claim.status === "REJECTED" ? "—" : `₹${(claim.approved_amount || 0).toLocaleString()}`}
+                        {claim.status === "REJECTED" ? <span className="text-[#b0aea5]">—</span> : <span className="text-[#27a644]">{`₹${(claim.approved_amount || 0).toLocaleString()}`}</span>}
                       </TableCell>
                       <TableCell>
                         <Badge className={`${STATUS_COLORS[claim.status] || ""} border`}>
@@ -254,12 +255,12 @@ export default function Dashboard() {
                       </TableCell>
                       <TableCell className="text-right">
                         {claim.confidence_score ? (
-                          <span className={`font-mono text-sm ${claim.confidence_score >= 0.9 ? "text-emerald-600" : claim.confidence_score >= 0.7 ? "text-amber-600" : "text-red-600"}`}>
+                          <span className={`font-mono text-sm ${claim.confidence_score >= 0.9 ? "text-[#27a644]" : claim.confidence_score >= 0.7 ? "text-amber-700" : "text-[#b53333]"}`}>
                             {(claim.confidence_score * 100).toFixed(0)}%
                           </span>
-                        ) : "—"}
+                        ) : <span className="text-[#b0aea5]">—</span>}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{claim.treatment_date}</TableCell>
+                      <TableCell className="text-[#87867f] text-sm">{claim.treatment_date}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
