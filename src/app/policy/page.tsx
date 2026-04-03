@@ -192,8 +192,37 @@ export default function PolicyExplorer() {
 
   const filteredChunks = kbFilter === "all" ? chunks : chunks.filter(c => c.source === kbFilter);
 
+  // Poll embedding status on mount
+  const [embeddingReady, setEmbeddingReady] = useState(false);
+  const [embeddingInitializing, setEmbeddingInitializing] = useState(false);
+  useEffect(() => {
+    let active = true;
+    async function poll() {
+      try {
+        const res = await fetch("/api/rag/status");
+        const data = await res.json();
+        if (!active) return;
+        setEmbeddingReady(data.ready);
+        setEmbeddingInitializing(data.initializing);
+        if (!data.ready) setTimeout(poll, 3000);
+      } catch { /* */ }
+    }
+    poll();
+    return () => { active = false; };
+  }, []);
+
   return (
     <div className="space-y-8 bg-[#faf9f5] min-h-screen">
+      {/* Embedding loading banner */}
+      {!embeddingReady && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 text-center">
+          <span className="inline-block animate-pulse mr-2">&#9679;</span>
+          {embeddingInitializing
+            ? "Loading AI embedding model (~23MB). First query may take 20-30 seconds..."
+            : "AI embeddings not yet initialized. They will load on the first query."}
+        </div>
+      )}
+
       {/* Header — centered */}
       <div className="text-center pt-4">
         <h1 className="text-3xl font-semibold tracking-tight text-[#141413]">Policy Explorer</h1>
@@ -241,7 +270,7 @@ export default function PolicyExplorer() {
       {/* ====== ASK ABOUT YOUR POLICY — Hero Section ====== */}
       <div className="max-w-3xl mx-auto">
         <Card className="border-2 border-[#c96442]/30 bg-gradient-to-br from-[#c96442]/5 to-[#d97757]/5 shadow-lg">
-          <CardContent className="pt-8 pb-8 px-8">
+          <CardContent className="pt-6 pb-6 px-4 sm:pt-8 sm:pb-8 sm:px-8">
             <div className="text-center space-y-4">
               <h2 className="text-2xl font-semibold tracking-tight text-[#141413]">Ask About Your Policy</h2>
 
@@ -306,12 +335,12 @@ export default function PolicyExplorer() {
           <p className="text-xs text-[#5e5d59]">Find relevant policy sections using semantic similarity</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form onSubmit={handleSearch} className="flex gap-2">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
             <select className="border border-[#e8e6dc] rounded px-3 py-2 text-sm bg-[#faf9f5] text-[#141413]" value={searchSourceFilter} onChange={e => setSearchSourceFilter(e.target.value)}>
               <option value="all">All Sources</option>
-              <option value="policy_terms">📋 Policy Terms</option>
-              <option value="adjudication_rules">⚖️ Adjudication Rules</option>
-              <option value="medical_knowledge">🏥 Medical Knowledge</option>
+              <option value="policy_terms">Policy Terms</option>
+              <option value="adjudication_rules">Adjudication Rules</option>
+              <option value="medical_knowledge">Medical Knowledge</option>
             </select>
             <input className="flex-1 border border-[#e8e6dc] rounded px-4 py-2 text-sm bg-[#faf9f5] text-[#141413] placeholder:text-[#87867f]" type="text" value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)} placeholder="Search: dental coverage, MRI pre-auth, waiting period..." />

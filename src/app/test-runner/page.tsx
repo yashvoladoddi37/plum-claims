@@ -187,11 +187,11 @@ export default function TestRunner() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-[#141413]">Test Runner</h1>
           <p className="text-[#5e5d59] text-sm">
-            {testCases.length} test cases loaded — review inputs &amp; expected outputs, then run individually or all at once
+            {testCases.length} test cases loaded
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export default function TestRunner() {
             <button onClick={() => setViewMode("table")} className={`px-3 py-1.5 ${viewMode === "table" ? "bg-[#c96442] text-white" : "bg-[#faf9f5] hover:bg-[#f0eee6] text-[#141413]"}`}>Table</button>
           </div>
           <Button onClick={runAllTests} disabled={loading} size="lg">
-            {loading ? "Running..." : "▶ Run All Tests"}
+            {loading ? "Running..." : "Run All"}
           </Button>
         </div>
       </div>
@@ -303,7 +303,7 @@ export default function TestRunner() {
       {/* Table View */}
       {viewMode === "table" && (
         <Card className="bg-[#faf9f5] border-[#f0eee6]">
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-[#f0eee6]">
@@ -362,7 +362,7 @@ export default function TestRunner() {
                       {isExpanded && (
                         <TableRow key={`${tc.case_id}-expand`}>
                           <TableCell colSpan={8} className="bg-[#f0eee6]/50">
-                            <div className="grid grid-cols-2 gap-4 p-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2">
                               <div>
                                 <p className="text-xs font-medium mb-1.5 text-[#141413]">Input Details:</p>
                                 <div className="bg-[#faf9f5] rounded-lg p-2.5 border border-[#f0eee6]">

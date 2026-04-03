@@ -160,21 +160,21 @@ export default function ClaimDetail() {
       <Link href="/" className="text-sm text-[#87867f] hover:text-[#141413] transition-colors">← Dashboard</Link>
 
       {/* Header */}
-      <div className={`rounded-xl border-2 p-6 ${STATUS_BG[status] || "bg-[#f0eee6]"}`}>
-        <div className="flex items-start justify-between">
+      <div className={`rounded-xl border-2 p-4 sm:p-6 ${STATUS_BG[status] || "bg-[#f0eee6]"}`}>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-semibold font-mono text-[#141413]">{String(claim.id)}</h1>
-              <Badge className={`text-base px-3 py-1 ${STATUS_BADGE[status] || ""}`}>{status}</Badge>
-              {isReviewed && <Badge className="bg-[#c96442]/10 text-[#c96442] border-[#c96442]/30 text-xs">✓ Reviewed</Badge>}
-              {claim.appeal_status === 'PENDING' && <Badge className="bg-purple-500/10 text-purple-700 text-xs">📋 Appeal Pending</Badge>}
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-semibold font-mono text-[#141413]">{String(claim.id)}</h1>
+              <Badge className={`text-sm sm:text-base px-2 sm:px-3 py-1 ${STATUS_BADGE[status] || ""}`}>{status}</Badge>
+              {isReviewed && <Badge className="bg-[#c96442]/10 text-[#c96442] border-[#c96442]/30 text-xs">Reviewed</Badge>}
+              {claim.appeal_status === 'PENDING' && <Badge className="bg-purple-500/10 text-purple-700 text-xs">Appeal Pending</Badge>}
             </div>
-            <p className="text-[#5e5d59]">{String(claim.member_name)} ({String(claim.member_id)}) · {String(claim.treatment_date)}</p>
-            {claim.hospital && <p className="text-sm text-[#5e5d59] mt-1">🏥 {String(claim.hospital)}</p>}
+            <p className="text-sm sm:text-base text-[#5e5d59]">{String(claim.member_name)} ({String(claim.member_id)}) · {String(claim.treatment_date)}</p>
+            {claim.hospital && <p className="text-sm text-[#5e5d59] mt-1">{String(claim.hospital)}</p>}
           </div>
-          <div className="text-right">
+          <div className="sm:text-right">
             <div className="text-sm text-[#5e5d59]">Claimed</div>
-            <div className="text-2xl font-semibold text-[#141413]">₹{Number(claim.claim_amount).toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-semibold text-[#141413]">₹{Number(claim.claim_amount).toLocaleString()}</div>
             {Number(claim.approved_amount) > 0 && (
               <div className="text-lg font-semibold text-[#27a644] mt-1">Approved: ₹{Number(claim.approved_amount).toLocaleString()}</div>
             )}
@@ -425,7 +425,7 @@ export default function ClaimDetail() {
             <p className="text-xs text-[#87867f]">Review the AI agents&apos; recommendations and make a final decision</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-[#87867f] block mb-1">Final Decision</label>
                 <select className="w-full border border-[#e8e6dc] rounded px-3 py-2 text-sm bg-[#faf9f5] text-[#141413]" value={finalDecision} onChange={e => setFinalDecision(e.target.value)}>
@@ -467,7 +467,7 @@ export default function ClaimDetail() {
           <CardContent className="space-y-4">
             <div>
               <label className="text-xs font-medium text-[#87867f] block mb-1">Appeal Category</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 {[
                   { value: 'documentation', label: '📄 Documentation Issue', desc: 'Missing or insufficient docs' },
                   { value: 'coverage', label: '📋 Coverage Dispute', desc: 'Believe treatment is covered' },

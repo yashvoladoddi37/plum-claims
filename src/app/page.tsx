@@ -92,14 +92,14 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-[32px] font-medium tracking-[-0.5px] text-[#141413]">Claims Dashboard</h1>
-          <p className="text-[#87867f] text-[15px] mt-1">AI-powered OPD claim adjudication with RAG-enhanced medical review</p>
+          <h1 className="text-2xl sm:text-[32px] font-medium tracking-[-0.5px] text-[#141413]">Claims Dashboard</h1>
+          <p className="text-[#87867f] text-sm sm:text-[15px] mt-1">AI-powered OPD claim adjudication with RAG-enhanced medical review</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/policy"><Button variant="outline" className="border-[#e8e6dc] text-[#4d4c48] hover:bg-[#f0eee6]">📚 Policy Explorer</Button></Link>
-          <Link href="/submit"><Button className="bg-[#c96442] hover:bg-[#d97757] text-[#faf9f5]">+ New Claim</Button></Link>
+          <Link href="/policy"><Button variant="outline" className="border-[#e8e6dc] text-[#4d4c48] hover:bg-[#f0eee6] text-xs sm:text-sm">Policy Explorer</Button></Link>
+          <Link href="/submit"><Button className="bg-[#c96442] hover:bg-[#d97757] text-[#faf9f5] text-xs sm:text-sm">+ New Claim</Button></Link>
         </div>
       </div>
 
@@ -197,9 +197,9 @@ export default function Dashboard() {
       {/* Claims Table */}
       <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-[#141413]">Recent Claims</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
               {["all", "APPROVED", "REJECTED", "PARTIAL", "MANUAL_REVIEW", "APPEALED"].map(s => (
                 <Button key={s} variant={statusFilter === s ? "default" : "ghost"}
                   className={`text-xs h-7 px-2 ${statusFilter === s ? "bg-[#e8e6dc] text-[#141413] hover:bg-[#e8e6dc]" : "text-[#87867f] hover:text-[#5e5d59] hover:bg-transparent"}`}
@@ -233,8 +233,8 @@ export default function Dashboard() {
                     <TableHead className="text-right text-[#87867f]">Claimed</TableHead>
                     <TableHead className="text-right text-[#87867f]">Approved</TableHead>
                     <TableHead className="text-[#87867f]">Status</TableHead>
-                    <TableHead className="text-right text-[#87867f]">Confidence</TableHead>
-                    <TableHead className="text-[#87867f]">Date</TableHead>
+                    <TableHead className="text-right text-[#87867f] hidden md:table-cell">Confidence</TableHead>
+                    <TableHead className="text-[#87867f] hidden md:table-cell">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -255,14 +255,14 @@ export default function Dashboard() {
                           {STATUS_ICONS[claim.status] || ""} {claim.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right hidden md:table-cell">
                         {claim.confidence_score ? (
                           <span className={`font-mono text-sm ${claim.confidence_score >= 0.9 ? "text-[#27a644]" : claim.confidence_score >= 0.7 ? "text-amber-700" : "text-[#b53333]"}`}>
                             {(claim.confidence_score * 100).toFixed(0)}%
                           </span>
                         ) : <span className="text-[#b0aea5]">—</span>}
                       </TableCell>
-                      <TableCell className="text-[#87867f] text-sm">{claim.treatment_date}</TableCell>
+                      <TableCell className="text-[#87867f] text-sm hidden md:table-cell">{claim.treatment_date}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

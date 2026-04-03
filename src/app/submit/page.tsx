@@ -222,9 +222,9 @@ export default function SubmitClaim() {
   const ragChunks = aiContext?.rag_chunks_used || [];
 
   return (
-    <div className="flex gap-6 max-w-7xl mx-auto" style={{ background: '#faf9f5', minHeight: '100vh' }}>
+    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto" style={{ background: '#faf9f5', minHeight: '100vh' }}>
       {/* ====== SIDEBAR — Test Documents ====== */}
-      <div className={`shrink-0 transition-all duration-300 ${sidebarOpen ? "w-72" : "w-10"}`}>
+      <div className={`shrink-0 transition-all duration-300 ${sidebarOpen ? "w-full lg:w-72" : "w-10"}`}>
         <div className="sticky top-4">
           {sidebarOpen ? (
             <div className="rounded-xl border-2 border-[#c96442]/30 shadow-lg ring-1 ring-[#c96442]/10" style={{ background: '#faf9f5' }}>
@@ -337,13 +337,13 @@ export default function SubmitClaim() {
 
       {/* ====== MAIN CONTENT ====== */}
       <div className="flex-1 min-w-0 space-y-6">
-        <div className="text-center pt-4 relative">
+        <div className="text-center pt-4">
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#141413' }}>Submit New Claim</h1>
           <p className="text-sm mt-1" style={{ color: '#5e5d59' }}>Upload documents or paste JSON — claim details are extracted automatically</p>
           <Button
             variant="outline"
             size="sm"
-            className="absolute right-0 top-4 text-xs text-[#b53333] border-[#b53333]/20 hover:bg-[#b53333]/5 hover:border-[#b53333]/30"
+            className="mt-2 sm:mt-0 sm:absolute sm:right-0 sm:top-4 text-xs text-[#b53333] border-[#b53333]/20 hover:bg-[#b53333]/5 hover:border-[#b53333]/30"
             onClick={async () => {
               if (!confirm('Delete all claims and start fresh?')) return;
               await fetch('/api/claims', { method: 'DELETE' });
@@ -391,7 +391,7 @@ export default function SubmitClaim() {
                     onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                     onDragLeave={() => setDragActive(false)}
                     onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer
+                    className={`relative border-2 border-dashed rounded-xl p-6 sm:p-10 text-center transition-all cursor-pointer
                       ${dragActive ? "border-[#c96442] scale-[1.01]" : "border-[#87867f]/25 hover:border-[#c96442]/50"}`}
                     style={dragActive ? { background: 'rgba(201,100,66,0.05)' } : { background: '#faf9f5' }}
                     onClick={() => document.getElementById("file-input")?.click()}

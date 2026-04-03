@@ -99,7 +99,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-3">
           {status ? (
             <>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div><span className="text-[#5e5d59]">API Key</span>
                   <p className="font-mono mt-0.5 text-[#141413]">{status.maskedKey || "Not configured"}</p>
                 </div>
@@ -190,7 +190,7 @@ export default function SettingsPage() {
           <CardTitle className="text-sm text-[#141413]">System Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div><span className="text-[#5e5d59]">Generation Model</span><p className="font-mono mt-0.5 text-[#141413]">gemini-2.5-flash</p></div>
             <div><span className="text-[#5e5d59]">Embedding Model</span><p className="font-mono mt-0.5 text-[#141413]">gemini-embedding-001</p></div>
             <div><span className="text-[#5e5d59]">Database</span><p className="font-mono mt-0.5 text-[#141413]">SQLite (local)</p></div>

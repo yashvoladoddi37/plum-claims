@@ -42,6 +42,17 @@ export interface RetrievalResult {
 // In-memory vector store
 let knowledgeBase: KnowledgeChunk[] = [];
 let isInitialized = false;
+let isInitializing = false;
+
+/** Whether the embedding model has been loaded and chunks are embedded */
+export function isEmbeddingReady(): boolean {
+  return isInitialized && knowledgeBase.some(c => c.embedding);
+}
+
+/** Whether the knowledge base is currently initializing (downloading model) */
+export function isEmbeddingInitializing(): boolean {
+  return isInitializing && !isInitialized;
+}
 
 // ---- Cosine Similarity ----
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -215,6 +226,7 @@ async function embedText(text: string): Promise<number[]> {
 
 export async function initializeKnowledgeBase(): Promise<void> {
   if (isInitialized) return;
+  isInitializing = true;
 
   // Auto-chunk from actual source files + medical knowledge
   knowledgeBase = [

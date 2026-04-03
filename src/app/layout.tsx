@@ -21,6 +21,18 @@ export const metadata: Metadata = {
   description: "AI-Powered OPD Claim Adjudication System with RAG, Explainability, and Human-in-the-Loop Review",
 };
 
+function MobileNav() {
+  return (
+    <div className="sm:hidden flex items-center gap-1 overflow-x-auto text-[12px] font-medium px-4 py-2 border-b border-[#f0eee6] bg-[#faf9f5]">
+      <Link href="/" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Dashboard</Link>
+      <Link href="/submit" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Submit</Link>
+      <Link href="/policy" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Policy</Link>
+      <Link href="/test-runner" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Tests</Link>
+      <Link href="/settings" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Settings</Link>
+    </div>
+  );
+}
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full`}>
@@ -40,6 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               </div>
             </div>
           </div>
+          <MobileNav />
         </nav>
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
           {children}
