@@ -40,19 +40,17 @@ export function calculateLimits(
   let workingAmount = baseAmount;
 
   // 1. Per-claim limit check
-  // Determine effective per-claim limit based on claim category.
-  // Category-specific sub-limits (dental ₹10K, diagnostic ₹10K, etc.) take precedence
-  // over the generic per-claim limit (₹5K) when the claim is entirely within that category.
   const genericPerClaimLimit = getPerClaimLimit();
-  const effectiveLimit = getCategoryLimit(claim) ?? genericPerClaimLimit;
+  const categoryLimit = getCategoryLimit(claim);
+  const effectiveLimit = categoryLimit ?? genericPerClaimLimit;
   const amountToCheck = adjustedAmount ?? claim.claim_amount;
 
   if (amountToCheck > effectiveLimit) {
-    // Claim exceeds per-claim limit — approve up to the limit (partial approval)
-    // per adjudication rules: "Claim exceeds limits (approve up to limit)"
     reasons.push('PER_CLAIM_EXCEEDED');
-    details.push(`Claim amount ₹${amountToCheck} exceeds per-claim limit of ₹${effectiveLimit}. Approved up to ₹${effectiveLimit}.`);
+    details.push(`Claim amount ₹${amountToCheck} exceeds limit of ₹${effectiveLimit}. Capped at limit.`);
     workingAmount = effectiveLimit;
+  } else {
+    details.push(`Claim amount ₹${amountToCheck} is within the ${categoryLimit ? 'category' : 'per-claim'} limit of ₹${effectiveLimit}.`);
   }
 
   // 2. Annual limit check
@@ -70,10 +68,11 @@ export function calculateLimits(
         details: details.join(' '),
       };
     } else {
-      // Partial — approve up to remaining limit
       workingAmount = remainingAnnual;
-      details.push(`Claim reduced to ₹${remainingAnnual} (annual limit remaining).`);
+      details.push(`Claim reduced to ₹${remainingAnnual} (remaining annual limit).`);
     }
+  } else {
+    details.push(`Remaining annual limit (₹${remainingAnnual}) is sufficient.`);
   }
 
   // 3. Network discount (applies BEFORE co-pay)
@@ -83,30 +82,27 @@ export function calculateLimits(
     const discountPct = getNetworkDiscount();
     networkDiscount = Math.round(workingAmount * discountPct / 100);
     workingAmount = workingAmount - networkDiscount;
-    details.push(`Network discount of ${discountPct}%: -₹${networkDiscount}.`);
+    details.push(`Network discount (${discountPct}%): -₹${networkDiscount} applied.`);
+  } else {
+    details.push('No network discount applicable.');
   }
 
   // 4. Co-pay calculation
-  // Co-pay of 10% applies ONLY to general consultation claims (TC001: ₹1500 → ₹1350)
-  // Does NOT apply to: network claims (TC010), alt medicine (TC006), dental (TC002),
-  // diagnostic-only, vision, or pharmacy-only claims.
-  // The 10% copay_percentage is under "consultation_fees" in policy, meaning it's
-  // specifically for consultation-type claims, not all claim categories.
   let copayDeduction = 0;
-  const categoryLimit = getCategoryLimit(claim);
-  const isSpecialtyCategory = categoryLimit !== null; // dental, alt medicine, vision, etc.
+  const isSpecialtyCategory = categoryLimit !== null;
   if (!isNetwork && !isSpecialtyCategory) {
-    const copayPct = getConsultationCopay(); // 10%
+    const copayPct = getConsultationCopay();
     copayDeduction = Math.round(workingAmount * copayPct / 100);
     workingAmount = workingAmount - copayDeduction;
-    details.push(`Co-pay of ${copayPct}%: -₹${copayDeduction}.`);
+    details.push(`Co-pay (${copayPct}%): -₹${copayDeduction} applied.`);
+  } else {
+    details.push(`No co-pay applicable (${isNetwork ? 'network hospital' : 'specialty category'}).`);
   }
 
   // 5. Minimum claim amount check
-  // (applied on the original claim amount, not after deductions)
   if (claim.claim_amount < 500) {
     reasons.push('BELOW_MIN_AMOUNT' as RejectionReason);
-    details.push(`Claim amount ₹${claim.claim_amount} is below minimum of ₹500.`);
+    details.push(`Claim amount ₹${claim.claim_amount} is below minimum requirement of ₹500.`);
     return {
       step: 'Limits Check',
       passed: false,
@@ -114,10 +110,11 @@ export function calculateLimits(
       reasons,
       details: details.join(' '),
     };
+  } else {
+    details.push(`Claim meets minimum amount requirement (₹${claim.claim_amount} >= ₹500).`);
   }
 
   const approvedAmount = Math.round(workingAmount);
-
   const perClaimCapped = reasons.includes('PER_CLAIM_EXCEEDED');
 
   return {
@@ -125,7 +122,7 @@ export function calculateLimits(
     passed: !perClaimCapped,
     decision_impact: perClaimCapped ? 'PARTIAL' : 'NONE',
     reasons,
-    details: details.length > 0 ? details.join(' ') : `Claim of ₹${claim.claim_amount} is within all limits.`,
+    details: details.join(' '),
     adjustments: {
       approved_amount: approvedAmount,
       copay_deduction: copayDeduction,

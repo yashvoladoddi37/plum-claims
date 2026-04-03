@@ -33,6 +33,7 @@ const SEED_MEMBERS = [
   { id: 'EMP028', name: 'Vivek Mishra', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
   { id: 'EMP029', name: 'Neha Srinivasan', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
   { id: 'EMP030', name: 'Aditya Gowda', join_date: '2024-08-15', policy_start_date: '2024-08-15' },
+  { id: 'PLUM-12345678', name: 'Ravi Kumar', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
 ];
 
 export async function seedMembers() {

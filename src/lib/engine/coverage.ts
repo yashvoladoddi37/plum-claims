@@ -46,10 +46,11 @@ export function checkCoverage(claim: ClaimInput): StepResult {
   }
 
   // 1. Check diagnosis against exclusions
-  const diagnosisExclusion = matchesExclusion(prescription.diagnosis || '');
+  const diagnosis = prescription.diagnosis || '';
+  const diagnosisExclusion = matchesExclusion(diagnosis);
   if (diagnosisExclusion) {
     reasons.push('SERVICE_NOT_COVERED');
-    details.push(`Treatment for "${prescription.diagnosis}" falls under excluded category: ${diagnosisExclusion}.`);
+    details.push(`Treatment for "${diagnosis}" falls under excluded category: ${diagnosisExclusion}.`);
     return {
       step: 'Coverage Check',
       passed: false,
@@ -57,6 +58,8 @@ export function checkCoverage(claim: ClaimInput): StepResult {
       reasons,
       details: details.join(' '),
     };
+  } else {
+    details.push(`Diagnosis "${diagnosis}" is covered under policy.`);
   }
 
   // 2. Check treatment/procedures against exclusions
@@ -72,6 +75,8 @@ export function checkCoverage(claim: ClaimInput): StepResult {
       reasons,
       details: details.join(' '),
     };
+  } else if (treatment) {
+    details.push(`Treatment "${treatment}" is a covered service.`);
   }
 
   // 3. Check individual procedures for partial coverage
@@ -80,19 +85,18 @@ export function checkCoverage(claim: ClaimInput): StepResult {
       const procExclusion = matchesExclusion(proc);
       if (procExclusion) {
         rejectedItems.push(`${proc} - ${procExclusion.toLowerCase()}`);
-        // Find and subtract the amount for this procedure from the bill
         const procKey = proc.toLowerCase().replace(/\s+/g, '_');
         const amount = bill[procKey] as number | undefined;
         if (amount) {
           partialAmount += amount;
         }
+      } else {
+        details.push(`Procedure "${proc}" verified as covered.`);
       }
     }
   }
 
   // 4. Check ALL bill items for cosmetic/excluded procedures
-  // This handles AI-extracted bill keys (e.g. 'professional_teeth_whitening_session')
-  // as well as hardcoded keys (e.g. 'teeth_whitening').
   const cosmeticKeywords = ['whitening', 'botox', 'liposuction', 'rhinoplasty', 'cosmetic', 'bleaching'];
   const weightLossKeywords = ['diet_plan', 'weight_loss', 'bariatric', 'slimming'];
 
@@ -123,15 +127,19 @@ export function checkCoverage(claim: ClaimInput): StepResult {
   // 5. Check pre-authorization for tests
   const preAuthTests = getPreAuthTests();
   const claimedTests = prescription.tests_prescribed || bill.test_names || [];
+  let preAuthNeeded = false;
 
   for (const test of claimedTests) {
     const testLower = test.toLowerCase();
     for (const preAuthTest of preAuthTests) {
       if (testLower.includes(preAuthTest.toLowerCase())) {
-        // MRI/CT scan needs pre-auth — check if the claim amount suggests a major test
         reasons.push('PRE_AUTH_MISSING');
         details.push(`${preAuthTest} requires pre-authorization.`);
+        preAuthNeeded = true;
       }
+    }
+    if (!preAuthNeeded && test) {
+      details.push(`No pre-authorization required for test "${test}".`);
     }
   }
 
@@ -164,7 +172,7 @@ export function checkCoverage(claim: ClaimInput): StepResult {
       passed: false,
       decision_impact: 'PARTIAL',
       reasons: ['EXCLUDED_CONDITION'],
-      details: `Partial coverage: ${rejectedItems.join('; ')}. Approved portion: ₹${approvedAmount}.`,
+      details: `Partial coverage: ${rejectedItems.join('; ')}. Approved portion: ₹${approvedAmount}. ${details.join(' ')}`,
       adjustments: {
         approved_amount: approvedAmount,
         rejected_items: rejectedItems,
@@ -177,6 +185,6 @@ export function checkCoverage(claim: ClaimInput): StepResult {
     passed: true,
     decision_impact: 'NONE',
     reasons: [],
-    details: 'All treatments and services are covered under the policy.',
+    details: details.join(' '),
   };
 }

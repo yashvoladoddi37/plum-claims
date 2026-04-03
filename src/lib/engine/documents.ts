@@ -27,12 +27,16 @@ export function validateDocuments(claim: ClaimInput): StepResult {
       reasons,
       details: details.join(' '),
     };
+  } else {
+    details.push(`Prescription found (Doctor: ${claim.documents.prescription.doctor_name || 'Unknown'}).`);
   }
 
   // 2. Bill present?
   if (!claim.documents.bill) {
     reasons.push('MISSING_DOCUMENTS');
     details.push('Medical bill/invoice is required.');
+  } else {
+    details.push(`Medical bill found.`);
   }
 
   // 3. Doctor registration number valid?
@@ -46,13 +50,19 @@ export function validateDocuments(claim: ClaimInput): StepResult {
     if (!lenientPattern.test(doctorReg)) {
       reasons.push('DOCTOR_REG_INVALID');
       details.push(`Doctor registration number "${doctorReg}" does not match expected format.`);
+    } else {
+      details.push(`Doctor registration "${doctorReg}" verified.`);
     }
+  } else {
+    details.push(`Doctor registration "${doctorReg}" verified.`);
   }
 
   // 4. Diagnosis present?
   if (!claim.documents.prescription.diagnosis) {
     reasons.push('INVALID_PRESCRIPTION');
     details.push('Diagnosis is missing from prescription.');
+  } else {
+    details.push(`Diagnosis "${claim.documents.prescription.diagnosis}" identified.`);
   }
 
   return {
@@ -60,6 +70,6 @@ export function validateDocuments(claim: ClaimInput): StepResult {
     passed: reasons.length === 0,
     decision_impact: reasons.length > 0 ? 'REJECT' : 'NONE',
     reasons,
-    details: details.length > 0 ? details.join(' ') : 'All documents are valid.',
+    details: details.join(' '),
   };
 }

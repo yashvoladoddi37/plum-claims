@@ -37,17 +37,17 @@ export function checkEligibility(
   }
 
   // 2. Policy active on treatment date?
-  // Policy is active if treatment date is on or after policy start date
   const policyStart = member.policy_start_date;
   if (claim.treatment_date < policyStart) {
     reasons.push('POLICY_INACTIVE');
     details.push(
       `Policy started on ${policyStart}, but treatment was on ${claim.treatment_date}.`
     );
+  } else {
+    details.push(`Policy active (since ${policyStart}).`);
   }
 
   // 3. Waiting period check
-  // Use member_join_date from claim if provided, otherwise use member record
   const joinDate = claim.member_join_date || member.join_date;
   const daysSinceJoin = daysBetween(joinDate, claim.treatment_date);
 
@@ -58,17 +58,20 @@ export function checkEligibility(
     details.push(
       `Initial waiting period of ${initialWaiting} days not met. Member joined ${joinDate}, only ${daysSinceJoin} days before treatment.`
     );
+  } else {
+    details.push(`Initial ${initialWaiting}-day waiting period satisfied (${daysSinceJoin} days since join).`);
   }
 
   // Specific ailment waiting periods
   const diagnosis = claim.documents.prescription?.diagnosis?.toLowerCase() || '';
   const specificWaiting = getSpecificAilmentWaiting();
+  let specificAilmentChecked = false;
 
   for (const [ailment, requiredDays] of Object.entries(specificWaiting)) {
     const ailmentLower = ailment.toLowerCase().replace('_', ' ');
     if (diagnosis.includes(ailmentLower)) {
+      specificAilmentChecked = true;
       if (daysSinceJoin < requiredDays) {
-        // Only add WAITING_PERIOD if not already added
         if (!reasons.includes('WAITING_PERIOD')) {
           reasons.push('WAITING_PERIOD');
         }
@@ -77,8 +80,14 @@ export function checkEligibility(
         details.push(
           `${ailment} has ${requiredDays}-day waiting period. Eligible from ${eligibleDate.toISOString().split('T')[0]}.`
         );
+      } else {
+        details.push(`Specific waiting period for ${ailment} (${requiredDays} days) satisfied.`);
       }
     }
+  }
+
+  if (!specificAilmentChecked && diagnosis) {
+    details.push(`No specific ailment waiting periods applicable for "${diagnosis}".`);
   }
 
   return {
@@ -86,6 +95,6 @@ export function checkEligibility(
     passed: reasons.length === 0,
     decision_impact: reasons.length > 0 ? 'REJECT' : 'NONE',
     reasons,
-    details: details.length > 0 ? details.join(' ') : 'All eligibility checks passed.',
+    details: details.join(' '),
   };
 }
