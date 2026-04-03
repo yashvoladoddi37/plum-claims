@@ -24,10 +24,10 @@ export const metadata: Metadata = {
 function MobileNav() {
   return (
     <div className="sm:hidden flex items-center gap-1 overflow-x-auto text-[12px] font-medium px-4 py-2 border-b border-[#f0eee6] bg-[#faf9f5]">
-      <Link href="/" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Dashboard</Link>
-      <Link href="/submit" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Submit</Link>
+      <Link href="/" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Submit</Link>
       <Link href="/policy" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Policy</Link>
       <Link href="/test-runner" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Tests</Link>
+      <Link href="/dashboard" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Dashboard</Link>
       <Link href="/settings" className="text-[#87867f] hover:text-[#141413] px-2.5 py-1 rounded-md transition-colors whitespace-nowrap">Settings</Link>
     </div>
   );
@@ -44,10 +44,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 <Image src="/plum-logo.svg" alt="Plum" width={80} height={25} className="h-6 w-auto" />
               </Link>
               <div className="hidden sm:flex items-center gap-0.5 text-[13px] font-medium">
-                <Link href="/" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Dashboard</Link>
-                <Link href="/submit" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Submit Claim</Link>
+                <Link href="/" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Submit Claim</Link>
                 <Link href="/policy" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Policy Explorer</Link>
                 <Link href="/test-runner" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Test Runner</Link>
+                <Link href="/dashboard" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Dashboard</Link>
                 <Link href="/settings" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Settings</Link>
               </div>
             </div>

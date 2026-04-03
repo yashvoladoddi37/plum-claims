@@ -387,12 +387,13 @@ export async function agenticAdjudicate(
   // Compute correct approved amount from coverage step
   const coverageApproved = coverageStep?.adjustments?.approved_amount as number | undefined;
 
-  if (hasReject && !hasPartial) {
-    // Hard reject — eligibility failed, service not covered, etc.
+  if (hasReject) {
+    // Hard reject takes precedence over everything — 
+    // eligibility failed, service not covered, or below minimum amount.
     decision = 'REJECTED';
     approvedAmount = 0;
   } else if (hasPartial) {
-    // Partial — some items excluded but others approved
+    // Partial — some items excluded or limits exceeded, but otherwise valid
     decision = 'PARTIAL';
     if (coverageApproved !== undefined && coverageApproved > 0) {
       approvedAmount = coverageApproved;
@@ -404,18 +405,6 @@ export async function agenticAdjudicate(
     decision = 'APPROVED';
     if (approvedAmount === 0) {
       approvedAmount = coverageApproved ?? claim.claim_amount;
-    }
-  }
-
-  // If eligibility fails because member not found but other checks passed,
-  // don't override a PARTIAL that the coverage agent correctly identified —
-  // the eligibility failure is noted but coverage analysis is still valid.
-  if (eligStep && !eligStep.passed && hasPartial && coverageApproved && coverageApproved > 0) {
-    decision = 'PARTIAL';
-    approvedAmount = coverageApproved;
-    // Keep the eligibility rejection reason but add coverage ones too
-    if (!rejectionReasons.includes('MEMBER_NOT_COVERED' as RejectionReason)) {
-      rejectionReasons.push('MEMBER_NOT_COVERED' as RejectionReason);
     }
   }
 
