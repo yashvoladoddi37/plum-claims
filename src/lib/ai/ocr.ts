@@ -67,7 +67,9 @@ async function extractWithGeminiVision(base64: string, mimeType: string): Promis
     }],
     generationConfig: { temperature: 0.1 },
   });
-  return result.response.text();
+  const text = result.response.text();
+  console.log(`✅ Gemini Vision extracted: ${text.slice(0, 100)}...`);
+  return text;
 }
 
 // ---- Main pipeline ----
@@ -94,7 +96,9 @@ export async function extractRawText(
         text = ocr.text;
         needsGeminiFallback = ocr.confidence < MIN_CONFIDENCE || text.trim().length < MIN_TEXT_LENGTH;
         if (needsGeminiFallback) {
-          console.log(`📄 Tesseract confidence: ${(ocr.confidence * 100).toFixed(0)}% — below threshold`);
+          console.log(`📄 Tesseract confidence: ${(ocr.confidence * 100).toFixed(0)}% — below threshold, escalating...`);
+        } else {
+          console.log(`✅ Tesseract extracted: ${text.slice(0, 100)}...`);
         }
       }
 
@@ -105,7 +109,6 @@ export async function extractRawText(
           return null;
         });
         if (geminiText && geminiText.trim().length > text.trim().length) {
-          console.log('✅ Gemini Vision produced better extraction');
           text = geminiText;
         }
       }

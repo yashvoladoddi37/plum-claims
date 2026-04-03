@@ -56,18 +56,11 @@ export async function POST(request: NextRequest) {
         const ext = aiExtraction.extraction;
         const extractedMemberId = ext.employee_id || ext.member_id;
         
-        if (!memberId && !extractedMemberId) {
-          return Response.json(
-            { error: 'OCR processing failed: Could not read Member ID or Employee ID from the provided document. Please ensure the document is clear and legible.' },
-            { status: 400 }
-          );
-        }
-
         claimInput = {
           member_id: memberId || extractedMemberId || `WALK_IN_${Date.now()}`,
           member_name: memberName || ext.patient_name || 'Unknown',
           treatment_date: ext.treatment_date || treatmentDate,
-          claim_amount: ext.total_amount || claimAmount,
+          claim_amount: ext.total_amount || claimAmount || 0,
           hospital: hospital || ext.doctor?.clinic_hospital || undefined,
           cashless_request: cashless,
           documents: {
