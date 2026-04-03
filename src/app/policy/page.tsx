@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,32 +39,55 @@ const SOURCE_ICONS: Record<string, string> = {
 
 /** Render simple markdown (bold, code, backticks) as inline HTML */
 function renderMarkdown(text: string) {
+  // First, normalize list-style content: insert newlines before "- " and "N. " patterns
+  let normalized = text
+    .replace(/ - /g, '\n- ')
+    .replace(/ (\d+)\. /g, '\n$1. ');
+
   const parts: React.ReactNode[] = [];
   let key = 0;
 
-  const regex = /\*\*(.+?)\*\*|`{3}([\s\S]*?)`{3}|`(.+?)`/g;
-  let lastIndex = 0;
-  let match;
+  // Split by newlines first, then process each line for inline markdown
+  const lines = normalized.split('\n');
 
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+  lines.forEach((line, lineIdx) => {
+    if (lineIdx > 0) parts.push(<br key={key++} />);
+
+    const trimmed = line.replace(/^[-•]\s*/, '');
+    const isList = line.match(/^[-•]\s/) !== null;
+    const isNumbered = line.match(/^\d+\.\s/) !== null;
+
+    const lineContent: React.ReactNode[] = [];
+    const regex = /\*\*(.+?)\*\*|`{3}([\s\S]*?)`{3}|`(.+?)`/g;
+    let lastIndex = 0;
+    let match;
+    const processText = isList ? trimmed : line;
+
+    while ((match = regex.exec(processText)) !== null) {
+      if (match.index > lastIndex) {
+        lineContent.push(processText.slice(lastIndex, match.index));
+      }
+      if (match[1]) {
+        lineContent.push(<strong key={key++}>{match[1]}</strong>);
+      } else if (match[2]) {
+        lineContent.push(<code key={key++} className="block bg-[#f0eee6] px-3 py-2 rounded text-xs font-mono my-1 whitespace-pre-wrap">{match[2].trim()}</code>);
+      } else if (match[3]) {
+        lineContent.push(<code key={key++} className="bg-[#f0eee6] px-1 py-0.5 rounded text-xs font-mono">{match[3]}</code>);
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < processText.length) {
+      lineContent.push(processText.slice(lastIndex));
     }
 
-    if (match[1]) {
-      parts.push(<strong key={key++}>{match[1]}</strong>);
-    } else if (match[2]) {
-      parts.push(<code key={key++} className="block bg-[#f0eee6] px-3 py-2 rounded text-xs font-mono my-1 whitespace-pre-wrap">{match[2].trim()}</code>);
-    } else if (match[3]) {
-      parts.push(<code key={key++} className="bg-[#f0eee6] px-1 py-0.5 rounded text-xs font-mono">{match[3]}</code>);
+    if (isList) {
+      parts.push(<span key={key++} className="flex gap-1.5 pl-2"><span className="text-[#87867f]">•</span><span>{lineContent}</span></span>);
+    } else if (isNumbered) {
+      parts.push(<span key={key++} className="pl-2">{lineContent}</span>);
+    } else {
+      parts.push(...lineContent);
     }
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
+  });
 
   return parts.length > 0 ? parts : [text];
 }
@@ -94,6 +117,7 @@ export default function PolicyExplorer() {
   const [qaResult, setQaResult] = useState<QAResult | null>(null);
   const [asking, setAsking] = useState(false);
   const [qaHistory, setQaHistory] = useState<QAResult[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Knowledge Base filter + expanded cards
   const [kbFilter, setKbFilter] = useState<string>("all");
@@ -126,9 +150,18 @@ export default function PolicyExplorer() {
     setSearching(false);
   }
 
+  function handleStop() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setAsking(false);
+  }
+
   async function handleAsk(q?: string) {
     const finalQ = q || question;
     if (!finalQ.trim()) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setAsking(true);
     setQuestion(finalQ);
     try {
@@ -136,6 +169,7 @@ export default function PolicyExplorer() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: finalQ }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (data.error || !data.answer) {
@@ -145,7 +179,8 @@ export default function PolicyExplorer() {
         setQaResult(safe);
         setQaHistory(prev => [safe, ...prev]);
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
       setQaResult({ question: finalQ, answer: 'Network error — the server may be busy. Please try again in a moment.', sources: [] });
     }
     setAsking(false);
@@ -209,9 +244,6 @@ export default function PolicyExplorer() {
           <CardContent className="pt-8 pb-8 px-8">
             <div className="text-center space-y-4">
               <h2 className="text-2xl font-semibold tracking-tight text-[#141413]">Ask About Your Policy</h2>
-              <p className="text-[#5e5d59] text-sm max-w-md mx-auto">
-                Ask questions in natural language — the AI will answer using the RAG knowledge base
-              </p>
 
               {/* Sample questions — centered */}
               <div className="flex flex-wrap justify-center gap-2 pt-2">
@@ -224,13 +256,19 @@ export default function PolicyExplorer() {
               </div>
 
               {/* Input — centered */}
-              <form onSubmit={(e) => { e.preventDefault(); handleAsk(); }} className="flex gap-2 max-w-xl mx-auto pt-2">
+              <form onSubmit={(e) => { e.preventDefault(); asking ? handleStop() : handleAsk(); }} className="flex gap-2 max-w-xl mx-auto pt-2 items-stretch">
                 <input className="flex-1 border border-[#e8e6dc] rounded-lg px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c96442]/30 focus:border-[#c96442]/30 bg-[#faf9f5] text-[#141413] placeholder:text-[#87867f]" type="text"
                   value={question} onChange={e => setQuestion(e.target.value)}
                   placeholder="Ask anything about your insurance policy..." />
-                <Button type="submit" disabled={asking || !question.trim()} className="px-6 bg-[#c96442] hover:bg-[#d97757] text-white">
-                  {asking ? "Thinking..." : "Ask"}
-                </Button>
+                {asking ? (
+                  <Button type="button" onClick={handleStop} className="px-6 bg-[#b53333] hover:bg-[#b53333]/80 text-white">
+                    Stop
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={!question.trim()} className="px-6 bg-[#c96442] hover:bg-[#d97757] text-white">
+                    Ask
+                  </Button>
+                )}
               </form>
             </div>
 

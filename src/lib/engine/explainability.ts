@@ -210,25 +210,35 @@ function buildLineItemDecisions(decision: Decision, claim: ClaimInput): LineItem
   const prescription = claim.documents.prescription;
   if (!bill) return items;
 
+  // If the overall claim is REJECTED, all line items should be rejected
+  const isClaimRejected = decision.decision === 'REJECTED';
+
   const coverageStep = decision.steps.find(s => s.step === 'Coverage Check');
   const rejectedItems = coverageStep?.adjustments?.rejected_items as string[] | undefined || [];
   const rejectedLower = rejectedItems.map(r => r.toLowerCase());
+
+  // Build the rejection reason for full-claim rejections
+  const claimRejectionReason = isClaimRejected
+    ? decision.rejection_reasons.map(r => REASON_EXPLANATIONS[r] || r).join('; ')
+    : undefined;
 
   // Build from bill entries
   for (const [key, value] of Object.entries(bill)) {
     if (typeof value !== 'number' || value === 0) continue;
 
     const description = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    const isRejected = rejectedLower.some(r => r.includes(key.replace(/_/g, ' ')));
+    const isItemRejected = isClaimRejected || rejectedLower.some(r => r.includes(key.replace(/_/g, ' ')));
     const category = inferCategory(key, prescription);
 
     items.push({
       description,
       category,
       claimed_amount: value,
-      approved_amount: isRejected ? 0 : value,
-      status: isRejected ? 'rejected' : 'approved',
-      reason: isRejected ? rejectedItems.find(r => r.toLowerCase().includes(key.replace(/_/g, ' '))) : undefined,
+      approved_amount: isItemRejected ? 0 : value,
+      status: isItemRejected ? 'rejected' : 'approved',
+      reason: isItemRejected
+        ? (rejectedItems.find(r => r.toLowerCase().includes(key.replace(/_/g, ' '))) || claimRejectionReason)
+        : undefined,
     });
   }
 

@@ -28,24 +28,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <nav className="sticky top-0 z-50 border-b border-[#f0eee6] bg-[#faf0ec]/92 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-14 items-center justify-between">
-              <div className="flex items-center gap-6">
-                <Link href="/" className="flex items-center gap-2.5 font-semibold text-[15px] tracking-[-0.2px]">
-                  <Image src="/plum-logo.svg" alt="Plum" width={80} height={25} className="h-6 w-auto" />
-                  <span className="text-[#5e5d59] text-[13px] font-normal">Claims</span>
-                </Link>
-                <div className="hidden sm:flex items-center gap-0.5 text-[13px] font-medium">
-                  <Link href="/" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Dashboard</Link>
-                  <Link href="/submit" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Submit Claim</Link>
-                  <Link href="/policy" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Policy Explorer</Link>
-                  <Link href="/test-runner" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Test Runner</Link>
-                  <Link href="/settings" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Settings</Link>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-[12px] font-medium text-[#87867f]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#27a644] animate-pulse" />
-                  <span>AI Active</span>
-                </div>
+              <Link href="/" className="flex items-center gap-2.5 font-semibold text-[15px] tracking-[-0.2px]">
+                <Image src="/plum-logo.svg" alt="Plum" width={80} height={25} className="h-6 w-auto" />
+              </Link>
+              <div className="hidden sm:flex items-center gap-0.5 text-[13px] font-medium">
+                <Link href="/" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Dashboard</Link>
+                <Link href="/submit" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Submit Claim</Link>
+                <Link href="/policy" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Policy Explorer</Link>
+                <Link href="/test-runner" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Test Runner</Link>
+                <Link href="/settings" className="text-[#87867f] hover:text-[#141413] px-3 py-1.5 rounded-lg transition-colors">Settings</Link>
               </div>
             </div>
           </div>

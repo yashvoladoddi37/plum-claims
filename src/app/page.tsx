@@ -167,25 +167,27 @@ export default function Dashboard() {
           <Card className="bg-[#faf9f5] border border-[#f0eee6] shadow-[0_0_0_1px_rgba(0,0,0,0.03)]">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-[#4d4c48]">Decision Distribution</CardTitle></CardHeader>
             <CardContent>
-              <div className="flex items-end gap-1 h-32 mb-2">
-                {[
-                  { key: 'APPROVED', count: stats.approved, color: 'bg-[#27a644]', label: 'Approved' },
-                  { key: 'PARTIAL', count: stats.partial, color: 'bg-[#d97757]', label: 'Partial' },
-                  { key: 'REJECTED', count: stats.rejected, color: 'bg-[#b53333]', label: 'Rejected' },
-                  { key: 'MANUAL_REVIEW', count: stats.manual, color: 'bg-orange-500', label: 'Review' },
-                  { key: 'APPEALED', count: stats.appealed, color: 'bg-purple-500', label: 'Appealed' },
-                ].map(item => {
-                  const pct = stats.total > 0 ? (item.count / stats.total) * 100 : 0;
-                  return (
-                    <div key={item.key} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-xs font-semibold text-[#4d4c48]">{item.count}</span>
-                      <div className="w-full relative" style={{ height: `${Math.max(pct, 4)}%` }}>
-                        <div className={`w-full h-full ${item.color} rounded-t-md`} />
+              <div className="flex items-end gap-3 h-40 mb-2 px-2">
+                {(() => {
+                  const items = [
+                    { key: 'APPROVED', count: stats.approved, color: 'bg-[#27a644]', label: 'Approved' },
+                    { key: 'PARTIAL', count: stats.partial, color: 'bg-[#d97757]', label: 'Partial' },
+                    { key: 'REJECTED', count: stats.rejected, color: 'bg-[#b53333]', label: 'Rejected' },
+                    { key: 'MANUAL_REVIEW', count: stats.manual, color: 'bg-orange-500', label: 'Review' },
+                    { key: 'APPEALED', count: stats.appealed, color: 'bg-purple-500', label: 'Appealed' },
+                  ];
+                  const maxCount = Math.max(...items.map(i => i.count), 1);
+                  return items.map(item => {
+                    const pct = (item.count / maxCount) * 100;
+                    return (
+                      <div key={item.key} className="flex-1 flex flex-col items-center justify-end h-full">
+                        <span className="text-sm font-semibold text-[#4d4c48] mb-1">{item.count}</span>
+                        <div className={`w-full ${item.color} rounded-t-md`} style={{ height: `${Math.max(pct, 6)}%` }} />
+                        <span className="text-xs text-[#87867f] mt-2">{item.label}</span>
                       </div>
-                      <span className="text-xs text-[#87867f]">{item.label}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -202,7 +204,7 @@ export default function Dashboard() {
                 <Button key={s} variant={statusFilter === s ? "default" : "ghost"}
                   className={`text-xs h-7 px-2 ${statusFilter === s ? "bg-[#e8e6dc] text-[#141413] hover:bg-[#e8e6dc]" : "text-[#87867f] hover:text-[#5e5d59] hover:bg-transparent"}`}
                   onClick={() => setStatusFilter(s)}>
-                  {s === "all" ? "All" : `${STATUS_ICONS[s] || ""} ${s.slice(0, 3)}`}
+                  {s === "all" ? "All" : `${STATUS_ICONS[s] || ""} ${s === "MANUAL_REVIEW" ? "Review" : s.charAt(0) + s.slice(1).toLowerCase()}`}
                 </Button>
               ))}
             </div>

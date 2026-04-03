@@ -8,9 +8,15 @@ Built for Plum's AI Automation Engineer Assignment.
 
 ---
 
-## Demo Video
+## Demo — Claim Submission & Agent Decision
 
-https://github.com/user-attachments/assets/4bb09def-04c9-4288-9176-87bed9ef570c
+https://github.com/user-attachments/assets/4d431d18-7da6-4fbc-8025-6c36c5dd4321
+
+---
+
+## Demo — Policy RAG Chat
+
+https://github.com/user-attachments/assets/15872534-987e-45a6-9597-3a2316e2fe4f
 
 ---
 
