@@ -25,8 +25,8 @@ function getGeminiVision() {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const client = new GoogleGenerativeAI(key);
-  // Using gemini-1.5-flash which is standard for Vision/OCR tasks
-  return client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  // Using gemini-pro-vision which is the standard model name
+  return client.getGenerativeModel({ model: 'gemini-pro-vision' });
 }
 
 // ---- Local extractors ----
