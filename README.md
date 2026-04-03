@@ -8,6 +8,12 @@ Built for Plum's AI Automation Engineer Assignment.
 
 ---
 
+## Demo Video
+
+https://github.com/user-attachments/assets/4bb09def-04c9-4288-9176-87bed9ef570c
+
+---
+
 ## How It Works
 
 A claim comes in (via document upload or structured JSON). The system:
