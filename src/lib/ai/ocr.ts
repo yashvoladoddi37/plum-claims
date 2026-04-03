@@ -25,16 +25,22 @@ function getGeminiVision() {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const client = new GoogleGenerativeAI(key);
-  return client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  // Using gemini-1.5-flash which is standard for Vision/OCR tasks
+  return client.getGenerativeModel({ model: 'gemini-1.5-flash' });
 }
 
 // ---- Local extractors ----
 
 async function extractTextFromPDF(base64: string): Promise<string> {
-  const buffer = Buffer.from(base64, 'base64');
-  const pdf = await getDocumentProxy(new Uint8Array(buffer));
-  const { text } = await extractText(pdf, { mergePages: true });
-  return text;
+  try {
+    const buffer = Buffer.from(base64, 'base64');
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return text || '';
+  } catch (err) {
+    console.warn('unpdf failed to extract text from PDF (might be scanned):', err);
+    return '';
+  }
 }
 
 async function extractTextFromImage(base64: string): Promise<{ text: string; confidence: number }> {
@@ -78,7 +84,11 @@ export async function extractRawText(
 
       if (file.mimeType === 'application/pdf') {
         text = await extractTextFromPDF(file.base64);
+        // Scanned PDFs return very little text via unpdf — trigger fallback
         needsGeminiFallback = text.trim().length < MIN_TEXT_LENGTH;
+        if (needsGeminiFallback) {
+          console.log(`📄 PDF text length: ${text.trim().length} — likely a scanned document, escalating...`);
+        }
       } else if (file.mimeType.startsWith('image/')) {
         const ocr = await extractTextFromImage(file.base64);
         text = ocr.text;
@@ -90,7 +100,10 @@ export async function extractRawText(
 
       // Fallback to Gemini Vision for hard cases
       if (needsGeminiFallback) {
-        const geminiText = await extractWithGeminiVision(file.base64, file.mimeType).catch(() => null);
+        const geminiText = await extractWithGeminiVision(file.base64, file.mimeType).catch((err) => {
+          console.error('Gemini Vision fallback failed:', err);
+          return null;
+        });
         if (geminiText && geminiText.trim().length > text.trim().length) {
           console.log('✅ Gemini Vision produced better extraction');
           text = geminiText;
