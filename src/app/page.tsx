@@ -126,17 +126,6 @@ const STATUS_ICON: Record<string, string> = {
   APPROVED: "✅", REJECTED: "❌", PARTIAL: "⚠️", MANUAL_REVIEW: "🔍",
 };
 
-const PIPELINE_STEPS = [
-  { name: 'Extracting Claim Data', icon: '📄', desc: 'Reading and parsing document contents' },
-  { name: 'Checking Eligibility', icon: '🛡️', desc: 'Verifying policy status and waiting periods' },
-  { name: 'Validating Documents', icon: '📋', desc: 'Checking prescriptions, bills, and registration' },
-  { name: 'Checking Coverage', icon: '📑', desc: 'Matching against exclusions and coverage rules' },
-  { name: 'Applying Limits', icon: '💰', desc: 'Calculating sub-limits, co-pay, and deductions' },
-  { name: 'Fraud Screening', icon: '🔍', desc: 'Scanning for duplicate claims and anomalies' },
-  { name: 'Medical Review', icon: '🧠', desc: 'AI assessment of medical necessity' },
-  { name: 'Finalizing Decision', icon: '⚖️', desc: 'Synthesizing the adjudication result' },
-];
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function readSSEStream(
   res: Response,
@@ -581,95 +570,140 @@ export default function SubmitClaim() {
           </TabsContent>
         </Tabs>
 
-        {/* ======== PIPELINE PROGRESS STEPPER ======== */}
+        {/* ======== LIVE AGENT OUTPUT ======== */}
         {pipelineProgress >= 0 && !result && (
-          <Card className="border-2 border-[#c96442]/20 overflow-hidden">
-            <CardHeader className="pb-3" style={{ background: 'linear-gradient(135deg, rgba(201,100,66,0.06), rgba(201,100,66,0.01))' }}>
-              <div className="flex items-center gap-3">
-                <div className="relative h-6 w-6">
-                  <div className="absolute inset-0 rounded-full border-2 border-[#c96442]/30" />
-                  <div className="absolute inset-0 rounded-full border-2 border-[#c96442] border-t-transparent animate-spin" />
-                </div>
-                <div>
-                  <CardTitle className="text-base" style={{ color: '#141413' }}>Processing Claim</CardTitle>
-                  <p className="text-xs mt-0.5" style={{ color: '#5e5d59' }}>
-                    {pipelineProgress < PIPELINE_STEPS.length
-                      ? `Running agent ${pipelineProgress + 1} of ${PIPELINE_STEPS.length}...`
-                      : 'All agents complete — preparing results...'}
-                  </p>
-                </div>
+          <div className="space-y-3">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-1">
+              <div className="relative h-5 w-5">
+                <div className="absolute inset-0 rounded-full border-2 border-[#c96442]/30" />
+                <div className="absolute inset-0 rounded-full border-2 border-[#c96442] border-t-transparent animate-spin" />
               </div>
-              <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: '#e8e6dc' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{
-                    width: `${Math.min(100, ((pipelineProgress >= PIPELINE_STEPS.length ? PIPELINE_STEPS.length : pipelineProgress + 1) / PIPELINE_STEPS.length) * 100)}%`,
-                    background: pipelineProgress >= PIPELINE_STEPS.length ? '#27a644' : '#c96442',
-                  }}
-                />
+              <div>
+                <p className="text-sm font-semibold" style={{ color: '#141413' }}>
+                  Adjudicating Claim — {liveSteps.length} agent{liveSteps.length !== 1 ? 's' : ''} reported
+                </p>
+                <p className="text-xs" style={{ color: '#5e5d59' }}>Each agent analyzes independently, then reports its decision and reasoning</p>
               </div>
-            </CardHeader>
-            <CardContent className="pt-3 pb-4">
-              <div className="space-y-0.5">
-                {PIPELINE_STEPS.map((step, i) => {
-                  const isComplete = i < pipelineProgress || pipelineProgress >= PIPELINE_STEPS.length;
-                  const isCurrent = i === pipelineProgress && pipelineProgress < PIPELINE_STEPS.length;
-                  const isPending = !isComplete && !isCurrent;
+            </div>
 
-                  return (
-                    <div
-                      key={i}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-500 ${
-                        isCurrent
-                          ? 'bg-[#c96442]/[0.06] ring-1 ring-[#c96442]/15'
-                          : isComplete
-                          ? 'bg-emerald-50/50'
-                          : ''
-                      }`}
-                      style={{ opacity: isPending ? 0.3 : 1, transition: 'all 0.5s ease' }}
-                    >
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0">
-                        {isComplete ? (
-                          <span className="text-emerald-600 text-xs font-bold">✓</span>
-                        ) : isCurrent ? (
-                          <div className="h-4 w-4 rounded-full border-2 border-[#c96442] border-t-transparent animate-spin" />
-                        ) : (
-                          <span className="text-xs grayscale opacity-60">{step.icon}</span>
-                        )}
+            {/* Live agent cards */}
+            {liveSteps.map((step, i) => {
+              const meta = AGENT_META[step.step] || { icon: '⚙️', name: step.step, description: '' };
+              const rec = getAgentRecommendation(step);
+
+              return (
+                <div
+                  key={i}
+                  className="rounded-xl border-2 overflow-hidden animate-in slide-in-from-bottom-2 duration-400"
+                  style={{
+                    borderColor: step.passed ? 'rgba(39,166,68,0.25)' : step.decision_impact === 'REJECT' ? 'rgba(181,51,51,0.25)' : 'rgba(201,100,66,0.25)',
+                    background: '#faf9f5',
+                  }}
+                >
+                  {/* Agent header */}
+                  <div className="flex items-center gap-3 px-4 py-3" style={{
+                    background: step.passed
+                      ? 'linear-gradient(135deg, rgba(39,166,68,0.06), transparent)'
+                      : step.decision_impact === 'REJECT'
+                      ? 'linear-gradient(135deg, rgba(181,51,51,0.06), transparent)'
+                      : 'linear-gradient(135deg, rgba(201,100,66,0.06), transparent)',
+                  }}>
+                    <span className="text-xl">{meta.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold text-sm" style={{ color: '#141413' }}>{meta.name}</span>
+                      <span className="text-xs ml-2 hidden sm:inline" style={{ color: '#5e5d59' }}>{meta.description}</span>
+                    </div>
+                    <Badge className={`border text-xs font-bold ${rec.color}`}>{rec.label}</Badge>
+                  </div>
+
+                  {/* Agent reasoning body */}
+                  <div className="px-4 pb-4 pt-2 space-y-3 border-t" style={{ borderColor: '#e8e6dc' }}>
+                    {/* Decision + Reasoning */}
+                    {step.details && (
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#87867f' }}>Reasoning</div>
+                        <p className="text-sm leading-relaxed" style={{ color: '#4d4c48' }}>{step.details}</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-sm font-medium transition-colors duration-300 ${
-                          isCurrent ? 'text-[#c96442]' : isComplete ? 'text-emerald-700' : 'text-[#87867f]'
+                    )}
+
+                    {/* Rejection reasons as proof */}
+                    {step.reasons.length > 0 && (
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#87867f' }}>
+                          {step.passed ? 'Codes' : 'Rejection Codes'}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {step.reasons.map((r, j) => (
+                            <span key={j} className="text-xs font-mono px-2 py-1 rounded-md border" style={{
+                              background: step.passed ? 'rgba(39,166,68,0.08)' : 'rgba(181,51,51,0.08)',
+                              borderColor: step.passed ? 'rgba(39,166,68,0.2)' : 'rgba(181,51,51,0.2)',
+                              color: step.passed ? '#27a644' : '#b53333',
+                            }}>{r}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Adjustments as proof of calculations */}
+                    {step.adjustments && Object.keys(step.adjustments).length > 0 && (
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#87867f' }}>Adjustments Applied</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {Object.entries(step.adjustments).map(([k, v]) => (
+                            <div key={k} className="rounded-lg border px-3 py-2" style={{ background: '#f0eee6', borderColor: '#e8e6dc' }}>
+                              <div className="text-[10px] uppercase" style={{ color: '#87867f' }}>{k.replace(/_/g, ' ')}</div>
+                              <div className="text-sm font-bold font-mono" style={{ color: '#141413' }}>
+                                {typeof v === 'number' ? `₹${v.toLocaleString()}` : JSON.stringify(v)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Impact indicator */}
+                    {step.decision_impact !== 'NONE' && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-[11px] font-semibold uppercase" style={{ color: '#87867f' }}>Impact:</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                          step.decision_impact === 'REJECT' ? 'bg-[#b53333]/10 text-[#b53333]'
+                          : step.decision_impact === 'PARTIAL' ? 'bg-amber-600/10 text-amber-700'
+                          : 'bg-orange-500/10 text-orange-700'
                         }`}>
-                          {step.name}
+                          {step.decision_impact === 'REJECT' ? 'Will reject claim'
+                           : step.decision_impact === 'PARTIAL' ? 'Partial approval — amount reduced'
+                           : 'Flagged for manual review'}
                         </span>
-                        {isCurrent && (
-                          <p className="text-[11px] mt-0.5 text-[#5e5d59] animate-pulse">{step.desc}</p>
-                        )}
                       </div>
-                      {isComplete && (
-                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">DONE</span>
-                      )}
-                      {isCurrent && (
-                        <span className="text-[10px] font-semibold text-[#c96442] bg-[#c96442]/10 px-1.5 py-0.5 rounded animate-pulse">RUNNING</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Warnings from API (rate limits, fallbacks) */}
-              {warnings.length > 0 && (
-                <div className="space-y-1.5 mt-3 pt-3 border-t border-amber-200">
-                  {warnings.map((w, i) => (
-                    <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs animate-in fade-in slide-in-from-top-1 duration-300">
-                      <span className="shrink-0 mt-0.5">&#x26A0;&#xFE0F;</span>
-                      <span className="text-amber-800 font-medium">{w}</span>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              );
+            })}
+
+            {/* Waiting indicator for next agent */}
+            {loading && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed" style={{ borderColor: '#c96442', background: 'rgba(201,100,66,0.03)' }}>
+                <div className="h-4 w-4 rounded-full border-2 border-[#c96442] border-t-transparent animate-spin" />
+                <span className="text-sm animate-pulse" style={{ color: '#c96442' }}>
+                  Next agent analyzing...
+                </span>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {warnings.length > 0 && (
+              <div className="space-y-1.5">
+                {warnings.map((w, i) => (
+                  <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs">
+                    <span className="shrink-0 mt-0.5">&#x26A0;&#xFE0F;</span>
+                    <span className="text-amber-800 font-medium">{w}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* ======== RESULT ======== */}
