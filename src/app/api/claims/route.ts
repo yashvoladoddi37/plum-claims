@@ -137,6 +137,10 @@ export async function POST(request: NextRequest) {
               })),
             };
           } catch (err) {
+            const errMsg = String(err).toLowerCase();
+            if (errMsg.includes('rate limit') || errMsg.includes('429')) {
+              sendUpdate({ type: 'warning', message: 'AI rate limit during medical review — proceeding with rules only' });
+            }
             console.warn('AI medical review failed:', err);
           }
         }
@@ -149,17 +153,31 @@ export async function POST(request: NextRequest) {
         const onStep = (step: StepResult) => {
           sendUpdate({ type: 'step', step });
         };
+        const onWarning = (message: string) => {
+          sendUpdate({ type: 'warning', message });
+        };
 
         if (isGroqAvailable()) {
           // Agentic path: LLM orchestrator decides which tools to call
           try {
-            const agentDecision = await agenticAdjudicate(claimInput, member || null, aiContext, claimId, onStep);
+            const agentDecision = await agenticAdjudicate(claimInput, member || null, aiContext, claimId, onStep, onWarning);
             decision = agentDecision;
             agentReasoning = agentDecision.agent_reasoning;
           } catch (agentErr) {
             // Fallback to deterministic pipeline if agent fails
+            const errMsg = String(agentErr).toLowerCase();
+            const isRateLimit = errMsg.includes('rate limit') || errMsg.includes('429') || errMsg.includes('rate_limit');
+            sendUpdate({
+              type: 'warning',
+              message: isRateLimit
+                ? 'AI API rate limit exhausted — falling back to rule-based adjudication (results unaffected)'
+                : 'AI agent error — falling back to rule-based adjudication',
+            });
             console.warn('⚠️ Agent failed, falling back to deterministic pipeline:', agentErr);
             decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+            for (const step of decision.steps) {
+              sendUpdate({ type: 'step', step });
+            }
           }
         } else {
           // Deterministic path: hardcoded sequential pipeline

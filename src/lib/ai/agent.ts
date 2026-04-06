@@ -279,7 +279,8 @@ export async function agenticAdjudicate(
   memberRecord: Member | null,
   aiContext?: AIContext,
   claimId: string = 'CLM_00000',
-  onStep?: (step: StepResult) => void
+  onStep?: (step: StepResult) => void,
+  onWarning?: (message: string) => void
 ): Promise<AgentDecision> {
   const startTime = Date.now();
   const tools = buildTools(claim, memberRecord, aiContext);
@@ -322,7 +323,7 @@ export async function agenticAdjudicate(
         }
       },
     });
-  });
+  }, onWarning);
 
   // Extract the agent's reasoning chain from result.steps
   const agentSteps: AgentStep[] = [];

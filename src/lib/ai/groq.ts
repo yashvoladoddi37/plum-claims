@@ -49,7 +49,8 @@ export function rotateGroqKey() {
  * Wrapper for Groq calls that handles automatic rotation on rate limits (429).
  */
 export async function withGroqRotation<T>(
-  operation: (provider: ReturnType<typeof createGroq>) => Promise<T>
+  operation: (provider: ReturnType<typeof createGroq>) => Promise<T>,
+  onRetry?: (message: string) => void
 ): Promise<T> {
   const keys = getApiKeys();
   // Cycle through all keys, then do a second pass with delays for TPM cooldown
@@ -93,9 +94,11 @@ export async function withGroqRotation<T>(
             // All keys tried once — wait for TPM cooldown before second pass
             const waitSec = retryAfter ? Math.min(parseInt(retryAfter, 10), 20) : 10;
             console.warn(`⚠️ All keys exhausted (attempt ${attempt + 1}/${maxAttempts}). Waiting ${waitSec}s for TPM cooldown...`);
+            onRetry?.(`All API keys rate-limited — waiting ${waitSec}s for cooldown...`);
             await new Promise(r => setTimeout(r, waitSec * 1000));
           } else {
             console.warn(`⚠️ Groq limit hit (attempt ${attempt + 1}/${maxAttempts}): ${msg.slice(0, 100)}. Rotating key...`);
+            onRetry?.('API rate limit hit — trying next key...');
           }
           rotateGroqKey();
           continue;

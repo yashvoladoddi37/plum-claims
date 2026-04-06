@@ -138,21 +138,41 @@ const PIPELINE_STEPS = [
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function parseSSEStream(res: Response): Promise<Record<string, any>> {
-  const text = await res.text();
-  for (const evt of text.split('\n\n')) {
-    const trimmed = evt.trim();
-    if (!trimmed.startsWith('data: ')) continue;
-    try {
-      const parsed = JSON.parse(trimmed.slice(6));
-      if (parsed.type === 'final') return parsed;
-      if (parsed.type === 'error') throw new Error(parsed.message);
-    } catch (e) {
-      if (e instanceof SyntaxError) continue;
-      throw e;
+async function readSSEStream(
+  res: Response,
+  onWarning: (msg: string) => void,
+): Promise<Record<string, any>> {
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let finalData: Record<string, any> | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (!trimmed.startsWith('data: ')) continue;
+      try {
+        const event = JSON.parse(trimmed.slice(6));
+        if (event.type === 'final') finalData = event;
+        else if (event.type === 'error') throw new Error(event.message);
+        else if (event.type === 'warning') onWarning(event.message);
+      } catch (e) {
+        if (e instanceof SyntaxError) continue;
+        throw e;
+      }
     }
   }
-  throw new Error('No response received from server');
+
+  if (!finalData) throw new Error('No response received from server');
+  return finalData;
 }
 
 function getAgentRecommendation(step: StepResult): { label: string; color: string } {
@@ -176,6 +196,7 @@ export default function SubmitClaim() {
   const [sidebarFilter, setSidebarFilter] = useState<"all" | "pdf" | "image">("all");
   const [strictMode, setStrictMode] = useState(true);
   const [pipelineProgress, setPipelineProgress] = useState<number>(-1);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   function toggleAgent(step: string) {
     setExpandedAgents(prev => ({ ...prev, [step]: !prev[step] }));
@@ -202,6 +223,7 @@ export default function SubmitClaim() {
     setResult(null);
     setExpandedAgents({});
     setPipelineProgress(0);
+    setWarnings([]);
 
     let currentStep = 0;
     const timer = setInterval(() => {
@@ -219,7 +241,7 @@ export default function SubmitClaim() {
       formData.append("strict_mode", String(strictMode));
 
       const res = await fetch("/api/claims", { method: "POST", body: formData });
-      const finalData = await parseSSEStream(res);
+      const finalData = await readSSEStream(res, (msg) => setWarnings(prev => [...prev, msg]));
 
       clearInterval(timer);
       for (let i = currentStep + 1; i <= PIPELINE_STEPS.length; i++) {
@@ -243,6 +265,7 @@ export default function SubmitClaim() {
     setResult(null);
     setExpandedAgents({});
     setPipelineProgress(0);
+    setWarnings([]);
 
     let currentStep = 0;
     const timer = setInterval(() => {
@@ -262,7 +285,7 @@ export default function SubmitClaim() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed),
       });
-      const finalData = await parseSSEStream(res);
+      const finalData = await readSSEStream(res, (msg) => setWarnings(prev => [...prev, msg]));
 
       clearInterval(timer);
       for (let i = currentStep + 1; i <= PIPELINE_STEPS.length; i++) {
@@ -655,6 +678,17 @@ export default function SubmitClaim() {
                   );
                 })}
               </div>
+              {/* Warnings from API (rate limits, fallbacks) */}
+              {warnings.length > 0 && (
+                <div className="space-y-1.5 mt-3 pt-3 border-t border-amber-200">
+                  {warnings.map((w, i) => (
+                    <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs animate-in fade-in slide-in-from-top-1 duration-300">
+                      <span className="shrink-0 mt-0.5">&#x26A0;&#xFE0F;</span>
+                      <span className="text-amber-800 font-medium">{w}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
