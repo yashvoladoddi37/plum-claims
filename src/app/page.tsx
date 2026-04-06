@@ -293,10 +293,10 @@ export default function SubmitClaim() {
   const ragChunks = aiContext?.rag_chunks_used || [];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto" style={{ background: '#faf9f5', minHeight: '100vh' }}>
+    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto" style={{ background: '#faf9f5' }}>
       {/* ====== SIDEBAR — Test Documents ====== */}
       <div className={`shrink-0 transition-all duration-300 ${sidebarOpen ? "w-full lg:w-72" : "w-10"}`}>
-        <div className="sticky top-4">
+        <div className="sticky top-20">
           {sidebarOpen ? (
             <div className="rounded-xl border-2 border-[#c96442]/30 shadow-lg ring-1 ring-[#c96442]/10" style={{ background: '#faf9f5' }}>
               <div className="p-4 pb-3 border-b border-[#e8e6dc]">
@@ -327,7 +327,7 @@ export default function SubmitClaim() {
                   ))}
                 </div>
               </div>
-              <div className="p-3 space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto">
+              <div className="p-3 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
                 {TEST_DOCUMENTS
                   .filter(doc => sidebarFilter === "all" || doc.type === sidebarFilter)
                   .map((doc) => {
