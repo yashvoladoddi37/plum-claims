@@ -126,6 +126,35 @@ const STATUS_ICON: Record<string, string> = {
   APPROVED: "✅", REJECTED: "❌", PARTIAL: "⚠️", MANUAL_REVIEW: "🔍",
 };
 
+const PIPELINE_STEPS = [
+  { name: 'Extracting Claim Data', icon: '📄', desc: 'Reading and parsing document contents' },
+  { name: 'Checking Eligibility', icon: '🛡️', desc: 'Verifying policy status and waiting periods' },
+  { name: 'Validating Documents', icon: '📋', desc: 'Checking prescriptions, bills, and registration' },
+  { name: 'Checking Coverage', icon: '📑', desc: 'Matching against exclusions and coverage rules' },
+  { name: 'Applying Limits', icon: '💰', desc: 'Calculating sub-limits, co-pay, and deductions' },
+  { name: 'Fraud Screening', icon: '🔍', desc: 'Scanning for duplicate claims and anomalies' },
+  { name: 'Medical Review', icon: '🧠', desc: 'AI assessment of medical necessity' },
+  { name: 'Finalizing Decision', icon: '⚖️', desc: 'Synthesizing the adjudication result' },
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function parseSSEStream(res: Response): Promise<Record<string, any>> {
+  const text = await res.text();
+  for (const evt of text.split('\n\n')) {
+    const trimmed = evt.trim();
+    if (!trimmed.startsWith('data: ')) continue;
+    try {
+      const parsed = JSON.parse(trimmed.slice(6));
+      if (parsed.type === 'final') return parsed;
+      if (parsed.type === 'error') throw new Error(parsed.message);
+    } catch (e) {
+      if (e instanceof SyntaxError) continue;
+      throw e;
+    }
+  }
+  throw new Error('No response received from server');
+}
+
 function getAgentRecommendation(step: StepResult): { label: string; color: string } {
   if (step.passed) return { label: 'PASS', color: 'bg-[#27a644]/15 text-[#27a644] border-emerald-300' };
   if (step.decision_impact === 'REJECT') return { label: 'DENY', color: 'bg-[#b53333]/10 text-[#b53333] border-[#b53333]/30' };
@@ -146,10 +175,7 @@ export default function SubmitClaim() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarFilter, setSidebarFilter] = useState<"all" | "pdf" | "image">("all");
   const [strictMode, setStrictMode] = useState(true);
-  
-  // Streaming state
-  const [currentStatus, setCurrentStatus] = useState<string>("");
-  const [progressSteps, setProgressSteps] = useState<StepResult[]>([]);
+  const [pipelineProgress, setPipelineProgress] = useState<number>(-1);
 
   function toggleAgent(step: string) {
     setExpandedAgents(prev => ({ ...prev, [step]: !prev[step] }));
@@ -169,62 +195,45 @@ export default function SubmitClaim() {
     }
   }, []);
 
-  async function processStream(response: Response) {
-    const reader = response.body?.getReader();
-    if (!reader) return;
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === "status") {
-              setCurrentStatus(data.message);
-            } else if (data.type === "step") {
-              setProgressSteps(prev => [...prev, data.step]);
-            } else if (data.type === "final") {
-              setResult(data);
-              setLoading(false);
-            } else if (data.type === "error") {
-              setResult({ error: data.message });
-              setLoading(false);
-            }
-          } catch (e) {
-            console.error("Failed to parse stream chunk", e);
-          }
-        }
-      }
-    }
-  }
-
   async function handleDocSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (files.length === 0) return;
     setLoading(true);
     setResult(null);
-    setCurrentStatus("Uploading documents...");
-    setProgressSteps([]);
     setExpandedAgents({});
+    setPipelineProgress(0);
+
+    let currentStep = 0;
+    const timer = setInterval(() => {
+      currentStep++;
+      if (currentStep < PIPELINE_STEPS.length) {
+        setPipelineProgress(currentStep);
+      } else {
+        clearInterval(timer);
+      }
+    }, 1100);
+
     try {
       const formData = new FormData();
       for (const file of files) formData.append("documents", file);
       formData.append("strict_mode", String(strictMode));
 
       const res = await fetch("/api/claims", { method: "POST", body: formData });
-      await processStream(res);
+      const finalData = await parseSSEStream(res);
+
+      clearInterval(timer);
+      for (let i = currentStep + 1; i <= PIPELINE_STEPS.length; i++) {
+        setPipelineProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 120));
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setResult(finalData);
     } catch (err) {
+      clearInterval(timer);
       setResult({ error: String(err) });
+    } finally {
       setLoading(false);
+      setPipelineProgress(-1);
     }
   }
 
@@ -232,9 +241,19 @@ export default function SubmitClaim() {
     e.preventDefault();
     setLoading(true);
     setResult(null);
-    setCurrentStatus("Initializing...");
-    setProgressSteps([]);
     setExpandedAgents({});
+    setPipelineProgress(0);
+
+    let currentStep = 0;
+    const timer = setInterval(() => {
+      currentStep++;
+      if (currentStep < PIPELINE_STEPS.length) {
+        setPipelineProgress(currentStep);
+      } else {
+        clearInterval(timer);
+      }
+    }, 1100);
+
     try {
       const parsed = JSON.parse(jsonInput);
       parsed.strict_mode = strictMode;
@@ -243,10 +262,21 @@ export default function SubmitClaim() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed),
       });
-      await processStream(res);
+      const finalData = await parseSSEStream(res);
+
+      clearInterval(timer);
+      for (let i = currentStep + 1; i <= PIPELINE_STEPS.length; i++) {
+        setPipelineProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 120));
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setResult(finalData);
     } catch (err) {
+      clearInterval(timer);
       setResult({ error: String(err) });
+    } finally {
       setLoading(false);
+      setPipelineProgress(-1);
     }
   }
 
@@ -549,52 +579,84 @@ export default function SubmitClaim() {
           </TabsContent>
         </Tabs>
 
-        {/* ======== STREAMING PROGRESS ======== */}
-        {loading && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-            <Card className="border-[#c96442]/20 shadow-md overflow-hidden relative">
-              <div className="absolute top-0 left-0 h-1 bg-[#c96442] animate-[loading-bar_2s_ease-in-out_infinite]" style={{ width: '30%' }} />
-              <CardHeader className="pb-3 bg-[#faf0ec]/30">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2" style={{ color: '#c96442' }}>
-                    <div className="w-2 h-2 rounded-full bg-[#c96442] animate-ping" />
-                    Live Adjudication
-                  </CardTitle>
-                  <Badge variant="outline" className="text-[10px] font-mono animate-pulse border-[#c96442]/30 text-[#c96442]">
-                    AGENT_STREAMING_ACTIVE
-                  </Badge>
+        {/* ======== PIPELINE PROGRESS STEPPER ======== */}
+        {pipelineProgress >= 0 && !result && (
+          <Card className="border-2 border-[#c96442]/20 overflow-hidden">
+            <CardHeader className="pb-3" style={{ background: 'linear-gradient(135deg, rgba(201,100,66,0.06), rgba(201,100,66,0.01))' }}>
+              <div className="flex items-center gap-3">
+                <div className="relative h-6 w-6">
+                  <div className="absolute inset-0 rounded-full border-2 border-[#c96442]/30" />
+                  <div className="absolute inset-0 rounded-full border-2 border-[#c96442] border-t-transparent animate-spin" />
                 </div>
-                <p className="text-xs mt-1 font-medium" style={{ color: '#5e5d59' }}>{currentStatus || "Analyzing documents..."}</p>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2 mt-4">
-                  {progressSteps.map((step, i) => {
-                    const meta = AGENT_META[step.step] || { icon: '⚙️', name: step.step };
-                    return (
-                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-white/50 border border-[#e8e6dc] animate-in slide-in-from-left-2 duration-300">
-                        <span className="text-lg">{meta.icon}</span>
-                        <div className="flex-1">
-                          <p className="text-[11px] font-bold" style={{ color: '#141413' }}>{meta.name}</p>
-                          <p className="text-[10px] truncate max-w-[200px]" style={{ color: '#87867f' }}>{step.details}</p>
-                        </div>
-                        <Badge className={`text-[9px] font-bold ${step.passed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                          {step.passed ? "PASS" : step.decision_impact}
-                        </Badge>
+                <div>
+                  <CardTitle className="text-base" style={{ color: '#141413' }}>Processing Claim</CardTitle>
+                  <p className="text-xs mt-0.5" style={{ color: '#5e5d59' }}>
+                    {pipelineProgress < PIPELINE_STEPS.length
+                      ? `Running agent ${pipelineProgress + 1} of ${PIPELINE_STEPS.length}...`
+                      : 'All agents complete — preparing results...'}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: '#e8e6dc' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${Math.min(100, ((pipelineProgress >= PIPELINE_STEPS.length ? PIPELINE_STEPS.length : pipelineProgress + 1) / PIPELINE_STEPS.length) * 100)}%`,
+                    background: pipelineProgress >= PIPELINE_STEPS.length ? '#27a644' : '#c96442',
+                  }}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-3 pb-4">
+              <div className="space-y-0.5">
+                {PIPELINE_STEPS.map((step, i) => {
+                  const isComplete = i < pipelineProgress || pipelineProgress >= PIPELINE_STEPS.length;
+                  const isCurrent = i === pipelineProgress && pipelineProgress < PIPELINE_STEPS.length;
+                  const isPending = !isComplete && !isCurrent;
+
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-500 ${
+                        isCurrent
+                          ? 'bg-[#c96442]/[0.06] ring-1 ring-[#c96442]/15'
+                          : isComplete
+                          ? 'bg-emerald-50/50'
+                          : ''
+                      }`}
+                      style={{ opacity: isPending ? 0.3 : 1, transition: 'all 0.5s ease' }}
+                    >
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0">
+                        {isComplete ? (
+                          <span className="text-emerald-600 text-xs font-bold">✓</span>
+                        ) : isCurrent ? (
+                          <div className="h-4 w-4 rounded-full border-2 border-[#c96442] border-t-transparent animate-spin" />
+                        ) : (
+                          <span className="text-xs grayscale opacity-60">{step.icon}</span>
+                        )}
                       </div>
-                    );
-                  })}
-                  {/* Current Active Step Skeleton */}
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f0eee6]/30 border border-dashed border-[#87867f]/30 animate-pulse">
-                    <div className="w-6 h-6 rounded bg-[#87867f]/10" />
-                    <div className="flex-1 space-y-1">
-                      <div className="h-2 w-24 bg-[#87867f]/10 rounded" />
-                      <div className="h-1.5 w-full bg-[#87867f]/5 rounded" />
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm font-medium transition-colors duration-300 ${
+                          isCurrent ? 'text-[#c96442]' : isComplete ? 'text-emerald-700' : 'text-[#87867f]'
+                        }`}>
+                          {step.name}
+                        </span>
+                        {isCurrent && (
+                          <p className="text-[11px] mt-0.5 text-[#5e5d59] animate-pulse">{step.desc}</p>
+                        )}
+                      </div>
+                      {isComplete && (
+                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">DONE</span>
+                      )}
+                      {isCurrent && (
+                        <span className="text-[10px] font-semibold text-[#c96442] bg-[#c96442]/10 px-1.5 py-0.5 rounded animate-pulse">RUNNING</span>
+                      )}
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* ======== RESULT ======== */}

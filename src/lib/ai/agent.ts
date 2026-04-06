@@ -307,7 +307,7 @@ export async function agenticAdjudicate(
         // Emit step update if callback provided
         if (onStep && event.toolResults && event.toolResults.length > 0) {
           for (const tr of event.toolResults) {
-            const toolOutput = tr.result as Record<string, unknown>;
+            const toolOutput = tr.output as Record<string, unknown>;
             if (toolOutput && typeof toolOutput === 'object' && 'step' in toolOutput) {
               onStep({
                 step: toolOutput.step as string,
