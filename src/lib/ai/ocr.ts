@@ -25,8 +25,8 @@ function getGeminiVision() {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const client = new GoogleGenerativeAI(key);
-  // Using gemini-pro-vision which is the standard model name
-  return client.getGenerativeModel({ model: 'gemini-pro-vision' });
+  // Using gemini-flash-latest which appeared in the available models list
+  return client.getGenerativeModel({ model: 'gemini-flash-latest' });
 }
 
 // ---- Local extractors ----

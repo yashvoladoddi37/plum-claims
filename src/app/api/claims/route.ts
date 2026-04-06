@@ -7,7 +7,7 @@ import { seedReady } from '@/lib/db/seed';
 import { claims, members } from '@/lib/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { adjudicate } from '@/lib/engine/pipeline';
-import { ClaimInput, Member, AIContext } from '@/lib/types';
+import { ClaimInput, Member, AIContext, StepResult } from '@/lib/types';
 import { extractFromDocuments, runMedicalReview } from '@/lib/ai/extract';
 import { isGroqAvailable } from '@/lib/ai/groq';
 import { generateExplanation } from '@/lib/engine/explainability';
@@ -22,185 +22,218 @@ async function generateClaimId(): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    await seedReady;
-    const contentType = request.headers.get('content-type') || '';
-    let claimInput: ClaimInput;
-    let documentFiles: { base64: string; mimeType: string }[] = [];
-    let aiExtraction = null;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const sendUpdate = (data: object) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
 
-    if (contentType.includes('multipart/form-data')) {
-      // File upload path
-      const formData = await request.formData();
-      const memberId = formData.get('member_id') as string;
-      const memberName = formData.get('member_name') as string;
-      const treatmentDate = formData.get('treatment_date') as string;
-      const claimAmount = parseFloat(formData.get('claim_amount') as string);
-      const hospital = formData.get('hospital') as string | null;
-      const cashless = formData.get('cashless_request') === 'true';
+      try {
+        await seedReady;
+        sendUpdate({ type: 'status', message: 'Initializing pipeline...' });
 
-      // Process uploaded files
-      const files = formData.getAll('documents') as File[];
-      for (const file of files) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        documentFiles.push({
-          base64: buffer.toString('base64'),
-          mimeType: file.type,
+        const contentType = request.headers.get('content-type') || '';
+        let claimInput: ClaimInput;
+        let documentFiles: { base64: string; mimeType: string }[] = [];
+        let aiExtraction = null;
+
+        if (contentType.includes('multipart/form-data')) {
+          // File upload path
+          const formData = await request.formData();
+          const memberId = formData.get('member_id') as string;
+          const memberName = formData.get('member_name') as string;
+          const treatmentDate = formData.get('treatment_date') as string;
+          const claimAmount = parseFloat(formData.get('claim_amount') as string);
+          const hospital = formData.get('hospital') as string | null;
+          const cashless = formData.get('cashless_request') === 'true';
+          const strictMode = formData.get('strict_mode') === 'true';
+
+          // Process uploaded files
+          const files = formData.getAll('documents') as File[];
+          for (const file of files) {
+            const buffer = Buffer.from(await file.arrayBuffer());
+            documentFiles.push({
+              base64: buffer.toString('base64'),
+              mimeType: file.type,
+            });
+          }
+
+          // If AI is available and we have files, extract data
+          if (isGroqAvailable() && documentFiles.length > 0) {
+            sendUpdate({ type: 'status', message: 'Extracting data from documents (OCR + AI)...' });
+            aiExtraction = await extractFromDocuments(documentFiles);
+            // Build claim input from AI extraction, falling back to form fields
+            const ext = aiExtraction.extraction;
+            const extractedMemberId = ext.employee_id || ext.member_id;
+            
+            claimInput = {
+              member_id: memberId || extractedMemberId || `WALK_IN_${Date.now()}`,
+              member_name: memberName || ext.patient_name || 'Unknown',
+              treatment_date: ext.treatment_date || treatmentDate,
+              claim_amount: ext.total_amount || claimAmount || 0,
+              hospital: hospital || ext.doctor?.clinic_hospital || undefined,
+              cashless_request: cashless,
+              strict_mode: strictMode,
+              documents: {
+                prescription: ext.doctor ? {
+                  doctor_name: ext.doctor.name || '',
+                  doctor_reg: ext.doctor.registration_number || '',
+                  diagnosis: ext.diagnosis || '',
+                  medicines_prescribed: ext.medicines_prescribed,
+                  tests_prescribed: ext.tests_prescribed,
+                  qualification: ext.doctor.qualification || undefined,
+                  clinic_hospital: ext.doctor.clinic_hospital || undefined,
+                } : undefined,
+                bill: ext.line_items.length > 0 ? Object.fromEntries(
+                  ext.line_items.map(li => [li.description.toLowerCase().replace(/\s+/g, '_'), li.amount])
+                ) : undefined,
+              },
+            };
+          } else {
+            // No AI — use form data directly
+            claimInput = {
+              member_id: memberId || `WALK_IN_${Date.now()}`,
+              member_name: memberName || 'Unknown',
+              treatment_date: treatmentDate,
+              claim_amount: claimAmount,
+              hospital: hospital || undefined,
+              cashless_request: cashless,
+              strict_mode: strictMode,
+              documents: {},
+            };
+          }
+        } else {
+          // JSON path (for test cases / direct API calls)
+          claimInput = await request.json();
+        }
+
+        sendUpdate({ type: 'status', message: 'Running adjudication agents...' });
+
+        // Look up member
+        const member = await db.select().from(members).where(eq(members.id, claimInput.member_id)).get() as Member | undefined;
+
+        // Build AI context — runs medical review + RAG even for JSON-path claims
+        let aiContext: AIContext | undefined;
+        if (isGroqAvailable() && claimInput.documents?.prescription?.diagnosis) {
+          try {
+            const prescription = claimInput.documents.prescription;
+            const { ragResults, medicalReview } = await runMedicalReview(
+              prescription.diagnosis,
+              prescription.procedures || [],
+              prescription.medicines_prescribed || [],
+              prescription.tests_prescribed || [],
+            );
+            aiContext = {
+              medical_necessity_score: medicalReview?.medical_necessity_score as number | undefined,
+              medical_necessity_reasoning: medicalReview?.reasoning as string | undefined,
+              flags: medicalReview?.flags as string[] | undefined,
+              coverage_assessment: medicalReview?.coverage_assessment as string | undefined,
+              rag_chunks_used: ragResults.map(r => ({
+                source: r.chunk.source,
+                category: r.chunk.category,
+                text: r.chunk.text,
+                similarity: r.similarity,
+              })),
+            };
+          } catch (err) {
+            console.warn('AI medical review failed:', err);
+          }
+        }
+
+        // Run adjudication — agentic path when AI is available, deterministic fallback otherwise
+        const claimId = await generateClaimId();
+        let decision;
+        let agentReasoning = null;
+
+        const onStep = (step: StepResult) => {
+          sendUpdate({ type: 'step', step });
+        };
+
+        if (isGroqAvailable()) {
+          // Agentic path: LLM orchestrator decides which tools to call
+          try {
+            const agentDecision = await agenticAdjudicate(claimInput, member || null, aiContext, claimId, onStep);
+            decision = agentDecision;
+            agentReasoning = agentDecision.agent_reasoning;
+          } catch (agentErr) {
+            // Fallback to deterministic pipeline if agent fails
+            console.warn('⚠️ Agent failed, falling back to deterministic pipeline:', agentErr);
+            decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+          }
+        } else {
+          // Deterministic path: hardcoded sequential pipeline
+          decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+          // Emit step results for frontend progress
+          for (const step of decision.steps) {
+            sendUpdate({ type: 'step', step });
+          }
+        }
+
+        // Generate explainability data
+        const explanation = generateExplanation(decision, claimInput, aiContext);
+
+        // Ensure member_id is never null for DB constraint
+        if (!claimInput.member_id) claimInput.member_id = `WALK_IN_${Date.now()}`;
+        if (!claimInput.member_name) claimInput.member_name = 'Unknown';
+
+        // Store claim
+        const now = new Date().toISOString();
+        await db.insert(claims).values({
+          id: claimId,
+          member_id: claimInput.member_id,
+          member_name: claimInput.member_name,
+          status: decision.decision,
+          claim_amount: claimInput.claim_amount,
+          approved_amount: decision.approved_amount,
+          treatment_date: claimInput.treatment_date,
+          submission_date: now.split('T')[0],
+          hospital: claimInput.hospital || null,
+          cashless_request: claimInput.cashless_request || false,
+          input_data_json: JSON.stringify(claimInput),
+          documents_json: documentFiles.length > 0 ? JSON.stringify(documentFiles.map(f => ({ mimeType: f.mimeType, size: f.base64.length }))) : null,
+          extraction_json: JSON.stringify({
+            ...(aiExtraction || {}),
+            ...(aiContext ? { aiContext } : {}),
+            ...(agentReasoning ? { agentReasoning } : {}),
+            explanation,
+          }),
+          decision: decision.decision,
+          decision_reasons_json: JSON.stringify(decision.rejection_reasons),
+          decision_notes: decision.notes,
+          confidence_score: decision.confidence_score,
+          processing_time_ms: decision.processing_time_ms,
+          pipeline_result_json: JSON.stringify(decision.steps),
+          created_at: now,
+          updated_at: now,
+        }).run();
+
+        sendUpdate({
+          type: 'final',
+          claim_id: claimId,
+          status: decision.decision,
+          claim_amount: claimInput.claim_amount,
+          decision,
+          explanation,
+          processing_time_ms: decision.processing_time_ms,
         });
+
+        controller.close();
+      } catch (error) {
+        console.error('Claim submission error:', error);
+        sendUpdate({ type: 'error', message: String(error) });
+        controller.close();
       }
+    },
+  });
 
-      // If AI is available and we have files, extract data
-      if (isGroqAvailable() && documentFiles.length > 0) {
-        aiExtraction = await extractFromDocuments(documentFiles);
-        // Build claim input from AI extraction, falling back to form fields
-        const ext = aiExtraction.extraction;
-        const extractedMemberId = ext.employee_id || ext.member_id;
-        
-        claimInput = {
-          member_id: memberId || extractedMemberId || `WALK_IN_${Date.now()}`,
-          member_name: memberName || ext.patient_name || 'Unknown',
-          treatment_date: ext.treatment_date || treatmentDate,
-          claim_amount: ext.total_amount || claimAmount || 0,
-          hospital: hospital || ext.doctor?.clinic_hospital || undefined,
-          cashless_request: cashless,
-          documents: {
-            prescription: ext.doctor ? {
-              doctor_name: ext.doctor.name || '',
-              doctor_reg: ext.doctor.registration_number || '',
-              diagnosis: ext.diagnosis || '',
-              medicines_prescribed: ext.medicines_prescribed,
-              tests_prescribed: ext.tests_prescribed,
-              qualification: ext.doctor.qualification || undefined,
-              clinic_hospital: ext.doctor.clinic_hospital || undefined,
-            } : undefined,
-            bill: ext.line_items.length > 0 ? Object.fromEntries(
-              ext.line_items.map(li => [li.description.toLowerCase().replace(/\s+/g, '_'), li.amount])
-            ) : undefined,
-          },
-        };
-      } else {
-        // No AI — use form data directly
-        claimInput = {
-          member_id: memberId || `WALK_IN_${Date.now()}`,
-          member_name: memberName || 'Unknown',
-          treatment_date: treatmentDate,
-          claim_amount: claimAmount,
-          hospital: hospital || undefined,
-          cashless_request: cashless,
-          documents: {},
-        };
-      }
-    } else {
-      // JSON path (for test cases / direct API calls)
-      claimInput = await request.json();
-    }
-
-    // Look up member
-    const member = await db.select().from(members).where(eq(members.id, claimInput.member_id)).get() as Member | undefined;
-
-    // Build AI context — runs medical review + RAG even for JSON-path claims
-    let aiContext: AIContext | undefined;
-    if (isGroqAvailable() && claimInput.documents?.prescription?.diagnosis) {
-      try {
-        const prescription = claimInput.documents.prescription;
-        const { ragResults, medicalReview } = await runMedicalReview(
-          prescription.diagnosis,
-          prescription.procedures || [],
-          prescription.medicines_prescribed || [],
-          prescription.tests_prescribed || [],
-        );
-        aiContext = {
-          medical_necessity_score: medicalReview?.medical_necessity_score as number | undefined,
-          medical_necessity_reasoning: medicalReview?.reasoning as string | undefined,
-          flags: medicalReview?.flags as string[] | undefined,
-          coverage_assessment: medicalReview?.coverage_assessment as string | undefined,
-          rag_chunks_used: ragResults.map(r => ({
-            source: r.chunk.source,
-            category: r.chunk.category,
-            text: r.chunk.text,
-            similarity: r.similarity,
-          })),
-        };
-      } catch (err) {
-        console.warn('AI medical review failed, proceeding with rules only:', err);
-      }
-    }
-
-    // Run adjudication — agentic path when AI is available, deterministic fallback otherwise
-    const claimId = await generateClaimId();
-    let decision;
-    let agentReasoning = null;
-
-    if (isGroqAvailable()) {
-      // Agentic path: LLM orchestrator decides which tools to call
-      console.log(`🤖 Running agentic adjudication for ${claimId}...`);
-      try {
-        const agentDecision = await agenticAdjudicate(claimInput, member || null, aiContext, claimId);
-        decision = agentDecision;
-        agentReasoning = agentDecision.agent_reasoning;
-        console.log(`✅ Agent decision: ${decision.decision} (${decision.confidence_score * 100}% confidence, ${agentDecision.agent_reasoning.length} tool calls)`);
-      } catch (agentErr) {
-        // Fallback to deterministic pipeline if agent fails
-        console.warn('⚠️ Agent failed, falling back to deterministic pipeline:', agentErr);
-        decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
-      }
-    } else {
-      // Deterministic path: hardcoded sequential pipeline
-      decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
-    }
-
-    // Generate explainability data
-    const explanation = generateExplanation(decision, claimInput, aiContext);
-
-    // Ensure member_id is never null for DB constraint
-    if (!claimInput.member_id) claimInput.member_id = `WALK_IN_${Date.now()}`;
-    if (!claimInput.member_name) claimInput.member_name = 'Unknown';
-
-    // Store claim
-    const now = new Date().toISOString();
-    await db.insert(claims).values({
-      id: claimId,
-      member_id: claimInput.member_id,
-      member_name: claimInput.member_name,
-      status: decision.decision,
-      claim_amount: claimInput.claim_amount,
-      approved_amount: decision.approved_amount,
-      treatment_date: claimInput.treatment_date,
-      submission_date: now.split('T')[0],
-      hospital: claimInput.hospital || null,
-      cashless_request: claimInput.cashless_request || false,
-      input_data_json: JSON.stringify(claimInput),
-      documents_json: documentFiles.length > 0 ? JSON.stringify(documentFiles.map(f => ({ mimeType: f.mimeType, size: f.base64.length }))) : null,
-      extraction_json: JSON.stringify({
-        ...(aiExtraction || {}),
-        ...(aiContext ? { aiContext } : {}),
-        ...(agentReasoning ? { agentReasoning } : {}),
-        explanation,
-      }),
-      decision: decision.decision,
-      decision_reasons_json: JSON.stringify(decision.rejection_reasons),
-      decision_notes: decision.notes,
-      confidence_score: decision.confidence_score,
-      processing_time_ms: decision.processing_time_ms,
-      pipeline_result_json: JSON.stringify(decision.steps),
-      created_at: now,
-      updated_at: now,
-    }).run();
-
-    return Response.json({
-      claim_id: claimId,
-      status: decision.decision,
-      decision,
-      explanation,
-      processing_time_ms: decision.processing_time_ms,
-    });
-  } catch (error) {
-    console.error('Claim submission error:', error);
-    return Response.json(
-      { error: 'Failed to process claim', details: String(error) },
-      { status: 500 }
-    );
-  }
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {

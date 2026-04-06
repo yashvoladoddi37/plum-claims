@@ -278,7 +278,8 @@ export async function agenticAdjudicate(
   claim: ClaimInput,
   memberRecord: Member | null,
   aiContext?: AIContext,
-  claimId: string = 'CLM_00000'
+  claimId: string = 'CLM_00000',
+  onStep?: (step: StepResult) => void
 ): Promise<AgentDecision> {
   const startTime = Date.now();
   const tools = buildTools(claim, memberRecord, aiContext);
@@ -301,6 +302,23 @@ export async function agenticAdjudicate(
         }
         if (event.text) {
           console.log(`  💭 Agent reasoning: ${event.text.slice(0, 150)}...`);
+        }
+
+        // Emit step update if callback provided
+        if (onStep && event.toolResults && event.toolResults.length > 0) {
+          for (const tr of event.toolResults) {
+            const toolOutput = tr.result as Record<string, unknown>;
+            if (toolOutput && typeof toolOutput === 'object' && 'step' in toolOutput) {
+              onStep({
+                step: toolOutput.step as string,
+                passed: toolOutput.passed as boolean,
+                decision_impact: (toolOutput.impact as StepResult['decision_impact']) || 'NONE',
+                reasons: (toolOutput.reasons as RejectionReason[]) || [],
+                details: (toolOutput.details as string) || '',
+                adjustments: (toolOutput.adjustments as StepResult['adjustments']) || undefined,
+              });
+            }
+          }
         }
       },
     });

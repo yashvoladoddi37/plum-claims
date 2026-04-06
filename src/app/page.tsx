@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -145,6 +145,11 @@ export default function SubmitClaim() {
   const [previewDoc, setPreviewDoc] = useState<TestDocument | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarFilter, setSidebarFilter] = useState<"all" | "pdf" | "image">("all");
+  const [strictMode, setStrictMode] = useState(true);
+  
+  // Streaming state
+  const [currentStatus, setCurrentStatus] = useState<string>("");
+  const [progressSteps, setProgressSteps] = useState<StepResult[]>([]);
 
   function toggleAgent(step: string) {
     setExpandedAgents(prev => ({ ...prev, [step]: !prev[step] }));
@@ -164,40 +169,85 @@ export default function SubmitClaim() {
     }
   }, []);
 
+  async function processStream(response: Response) {
+    const reader = response.body?.getReader();
+    if (!reader) return;
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === "status") {
+              setCurrentStatus(data.message);
+            } else if (data.type === "step") {
+              setProgressSteps(prev => [...prev, data.step]);
+            } else if (data.type === "final") {
+              setResult(data);
+              setLoading(false);
+            } else if (data.type === "error") {
+              setResult({ error: data.message });
+              setLoading(false);
+            }
+          } catch (e) {
+            console.error("Failed to parse stream chunk", e);
+          }
+        }
+      }
+    }
+  }
+
   async function handleDocSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (files.length === 0) return;
     setLoading(true);
     setResult(null);
+    setCurrentStatus("Uploading documents...");
+    setProgressSteps([]);
     setExpandedAgents({});
     try {
       const formData = new FormData();
       for (const file of files) formData.append("documents", file);
+      formData.append("strict_mode", String(strictMode));
 
       const res = await fetch("/api/claims", { method: "POST", body: formData });
-      const data = await res.json();
-      setResult(data);
+      await processStream(res);
     } catch (err) {
       setResult({ error: String(err) });
-    } finally { setLoading(false); }
+      setLoading(false);
+    }
   }
 
   async function handleJsonSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setResult(null);
+    setCurrentStatus("Initializing...");
+    setProgressSteps([]);
     setExpandedAgents({});
     try {
       const parsed = JSON.parse(jsonInput);
+      parsed.strict_mode = strictMode;
       const res = await fetch("/api/claims", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed),
       });
-      setResult(await res.json());
+      await processStream(res);
     } catch (err) {
       setResult({ error: String(err) });
-    } finally { setLoading(false); }
+      setLoading(false);
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -337,7 +387,7 @@ export default function SubmitClaim() {
 
       {/* ====== MAIN CONTENT ====== */}
       <div className="flex-1 min-w-0 space-y-6">
-        <div className="text-center pt-4">
+        <div className="text-center pt-4 relative">
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#141413' }}>Submit New Claim</h1>
           <p className="text-sm mt-1" style={{ color: '#5e5d59' }}>Upload documents or paste JSON — claim details are extracted automatically</p>
           <Button
@@ -386,6 +436,27 @@ export default function SubmitClaim() {
             <Card>
               <CardContent className="pt-6">
                 <form onSubmit={handleDocSubmit} className="space-y-5">
+                  {/* Strict Mode Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-[#e8e6dc]" style={{ background: '#f0eee6' }}>
+                    <div>
+                      <Label className="text-sm font-semibold" style={{ color: '#141413' }}>Strict Validation</Label>
+                      <p className="text-[11px]" style={{ color: '#5e5d59' }}>Toggle OFF to assume Member ID and Doctor Reg are valid</p>
+                    </div>
+                    <div className="relative flex items-center h-6">
+                      <input
+                        type="checkbox"
+                        checked={strictMode}
+                        onChange={(e) => setStrictMode(e.target.checked)}
+                        className="w-10 h-5 rounded-full appearance-none cursor-pointer transition-colors"
+                        style={{
+                          background: strictMode ? '#c96442' : '#87867f',
+                          border: 'none',
+                        }}
+                      />
+                      <div className={`absolute w-4 h-4 bg-white rounded-full transition-transform pointer-events-none transform ${strictMode ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </div>
+                  </div>
+
                   {/* Drag & Drop Zone */}
                   <div
                     onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -444,8 +515,18 @@ export default function SubmitClaim() {
                     </div>
                   )}
 
-                  <Button type="submit" disabled={loading || files.length === 0} className="w-full h-11 text-base">
-                    {loading ? "Processing Documents..." : "Submit Claim"}
+                  <Button type="submit" disabled={loading || files.length === 0} className="w-full h-11 text-base relative overflow-hidden group">
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      {loading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Processing...
+                        </>
+                      ) : "Submit Claim"}
+                    </span>
+                    {loading && (
+                      <div className="absolute inset-0 bg-white/10 animate-pulse" />
+                    )}
                   </Button>
                 </form>
               </CardContent>
@@ -468,6 +549,54 @@ export default function SubmitClaim() {
           </TabsContent>
         </Tabs>
 
+        {/* ======== STREAMING PROGRESS ======== */}
+        {loading && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+            <Card className="border-[#c96442]/20 shadow-md overflow-hidden relative">
+              <div className="absolute top-0 left-0 h-1 bg-[#c96442] animate-[loading-bar_2s_ease-in-out_infinite]" style={{ width: '30%' }} />
+              <CardHeader className="pb-3 bg-[#faf0ec]/30">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2" style={{ color: '#c96442' }}>
+                    <div className="w-2 h-2 rounded-full bg-[#c96442] animate-ping" />
+                    Live Adjudication
+                  </CardTitle>
+                  <Badge variant="outline" className="text-[10px] font-mono animate-pulse border-[#c96442]/30 text-[#c96442]">
+                    AGENT_STREAMING_ACTIVE
+                  </Badge>
+                </div>
+                <p className="text-xs mt-1 font-medium" style={{ color: '#5e5d59' }}>{currentStatus || "Analyzing documents..."}</p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2 mt-4">
+                  {progressSteps.map((step, i) => {
+                    const meta = AGENT_META[step.step] || { icon: '⚙️', name: step.step };
+                    return (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-white/50 border border-[#e8e6dc] animate-in slide-in-from-left-2 duration-300">
+                        <span className="text-lg">{meta.icon}</span>
+                        <div className="flex-1">
+                          <p className="text-[11px] font-bold" style={{ color: '#141413' }}>{meta.name}</p>
+                          <p className="text-[10px] truncate max-w-[200px]" style={{ color: '#87867f' }}>{step.details}</p>
+                        </div>
+                        <Badge className={`text-[9px] font-bold ${step.passed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {step.passed ? "PASS" : step.decision_impact}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                  {/* Current Active Step Skeleton */}
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f0eee6]/30 border border-dashed border-[#87867f]/30 animate-pulse">
+                    <div className="w-6 h-6 rounded bg-[#87867f]/10" />
+                    <div className="flex-1 space-y-1">
+                      <div className="h-2 w-24 bg-[#87867f]/10 rounded" />
+                      <div className="h-1.5 w-full bg-[#87867f]/5 rounded" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* ======== RESULT ======== */}
         {result && result.error && (
           <Card className="border-[#b53333]/30">
@@ -485,7 +614,7 @@ export default function SubmitClaim() {
         )}
 
         {result && status && !result.error && (
-          <div className="space-y-5">
+          <div className="space-y-5 animate-in zoom-in-95 duration-500">
             {/* --- Decision Header --- */}
             <div className={`rounded-xl border-2 p-6 ${STATUS_BG[status] || "bg-[#f0eee6]"}`}>
               <div className="flex items-start justify-between">

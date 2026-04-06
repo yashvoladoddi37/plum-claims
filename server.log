@@ -1,0 +1,157 @@
+
+> plum-claims@0.1.0 dev
+> next dev -p 3737
+
+▲ Next.js 16.2.1 (Turbopack)
+- Local:         http://localhost:3737
+- Network:       http://192.168.1.5:3737
+- Environments: .env.local
+✓ Ready in 421ms
+
+📄 Running OCR on 1 document(s)...
+📄 PDF text length: 0 — likely a scanned document, escalating...
+🔭 Escalating to Gemini Vision for difficult document...
+✅ Gemini Vision extracted: Medical Claim Form
+
+Patient Name: Ravi Kumar
+
+Age: 34  Gender: Male
+Policy No: PLUM-12345678
+
+Claim ...
+✅ OCR extracted 340 characters
+📚 Built 38 knowledge chunks (policy: 11, rules: 19, medical: 8)
+✅ RAG knowledge base initialized with 38 chunks
+⚠️ Groq limit hit (attempt 1/6): rate limit reached for model `llama-3.1-8b-instant` in organization `org_01jp33vzrmf17v17x8znynac5x`. Rotating key...
+🔄 Rotated Groq API key to index 1
+🤖 Running agentic adjudication for CLM_00056...
+⚠️ Groq limit hit (attempt 1/6): rate limit reached for model `llama-3.1-8b-instant` in organization `org_01hzpskrf1en7aer4sjxzq07n6`. Rotating key...
+🔄 Rotated Groq API key to index 2
+  🔧 Agent called: lookup_member({"member_id":"PLUM-12345678"})
+  🔧 Agent called: search_policy({"query":"policy details for PLUM-12345678"})
+  🔧 Agent called: check_eligibility({"reason":"checking eligibility for OPD claim on 2026-03-20"})
+  🔧 Agent called: validate_documents({"reason":"validating documents for claim on 2026-03-20"})
+  🔧 Agent called: search_policy({"query":"waiting periods for viral fever treatment in PLUM policy"})
+  🔧 Agent called: check_coverage({"reason":"checking coverage for claim on 2026-03-20 with diagnosis viral fever"})
+  🔧 Agent called: calculate_limits({"reason":"calculating limits for OPD claim on 2026-03-20","adjusted_amount":325})
+  🔧 Agent called: detect_fraud({"reason":"detecting potential fraud for claim on 2026-03-20 with ₹325"})
+  🔧 Agent called: assess_medical_necessity({"reason":"assessing medical necessity for viral fever treatment"})
+  🔧 Agent called: make_decision({"decision":"REJECTED","approved_amount":0,"rejection_reasons":["DOCTOR_REG_INVALID","NOT_MEDICALLY_)
+⚠️ Groq limit hit (attempt 2/6): rate limit reached for model `llama-3.1-8b-instant` in organization `org_01kn6qg30nf96v50dvda3fygnb`. Rotating key...
+🔄 Rotated Groq API key to index 0
+⚠️ All keys exhausted (attempt 3/6). Waiting 16s for TPM cooldown...
+🔄 Rotated Groq API key to index 1
+  🔧 Agent called: lookup_member({"member_id":"PLUM-12345678"})
+  🔧 Agent called: search_policy({"query":"active waiting periods for viral fever, consulting doctor registration format in India"})
+  🔧 Agent called: check_eligibility({"reason":"verify eligibility for viral fever treatment"})
+  🔧 Agent called: validate_documents({"reason":"validate prescription and bill for viral fever treatment"})
+  🔧 Agent called: search_policy({"query":"cosmetic procedures exclusion, pre-authorization requirements for OPD services in India"})
+  🔧 Agent called: check_coverage({"reason":"check coverage for OPD services and medicines"})
+  🔧 Agent called: calculate_limits({"reason":"calculate claim limits, co-pay, and network discounts"})
+  🔧 Agent called: detect_fraud({"reason":"screen for suspicious patterns and high-value claims"})
+  🔧 Agent called: assess_medical_necessity({"reason":"assess medical necessity for viral fever treatment"})
+⚠️ All keys exhausted (attempt 4/6). Waiting 20s for TPM cooldown...
+🔄 Rotated Groq API key to index 2
+  🔧 Agent called: lookup_member({"member_id":"PLUM-12345678"})
+  🔧 Agent called: check_eligibility({"reason":"checking eligibility for OPD claim"})
+  🔧 Agent called: validate_documents({"reason":"validating documents for OPD claim"})
+  🔧 Agent called: search_policy({"query":"waiving waiting period for viral fever"})
+  🔧 Agent called: check_coverage({"reason":"checking coverage for OPD claim"})
+  🔧 Agent called: calculate_limits({"reason":"calculating limits for OPD claim","adjusted_amount":100})
+  🔧 Agent called: detect_fraud({"reason":"detecting fraud for OPD claim"})
+  🔧 Agent called: assess_medical_necessity({"reason":"assessing medical necessity for OPD claim"})
+  🔧 Agent called: make_decision({"decision":"REJECTED","approved_amount":0,"rejection_reasons":["MANUAL_REVIEW"],"confidence_score":)
+⚠️ All keys exhausted (attempt 5/6). Waiting 20s for TPM cooldown...
+🔄 Rotated Groq API key to index 0
+  🔧 Agent called: lookup_member({"member_id":"PLUM-12345678"})
+  🔧 Agent called: search_policy({"query":"PLUM OPD waiting period"})
+  🔧 Agent called: check_eligibility({"reason":"check eligibility for OPD claim"})
+  🔧 Agent called: validate_documents({"reason":"validate OPD claim documents"})
+  🔧 Agent called: search_policy({"query":"PLUM OPD exclusions"})
+  🔧 Agent called: check_coverage({"reason":"check coverage for OPD claim"})
+  🔧 Agent called: calculate_limits({"reason":"calculate financial limits and deductions","adjusted_amount":325})
+  🔧 Agent called: detect_fraud({"reason":"screen claim for fraud indicators"})
+  🔧 Agent called: assess_medical_necessity({"reason":"assess medical necessity for OPD claim"})
+  🔧 Agent called: make_decision({"decision":"APPROVED","approved_amount":293.2,"rejection_reasons":[],"confidence_score":0.8,"reason)
+⚠️ Agent failed, falling back to deterministic pipeline: Error [AI_APICallError]: Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01jp33vzrmf17v17x8znynac5x` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 2392, Requested 3931. Please try again in 3.23s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing
+    at async (src/lib/ai/agent.ts:288:12)
+    at async withGroqRotation (src/lib/ai/groq.ts:61:14)
+    at async agenticAdjudicate (src/lib/ai/agent.ts:287:18)
+    at async POST (src/app/api/claims/route.ts:138:31)
+  286 |
+  287 |   const result = await withGroqRotation(async (groq) => {
+> 288 |     return await generateText({
+      |            ^
+  289 |       model: groq(GROQ_MODEL),
+  290 |       system: SYSTEM_PROMPT,
+  291 |       prompt: `Process the following OPD insurance claim and make an adjudication decisio... {
+  cause: undefined,
+  url: 'https://api.groq.com/openai/v1/chat/completions',
+  requestBodyValues: {
+    model: 'llama-3.1-8b-instant',
+    user: undefined,
+    parallel_tool_calls: undefined,
+    max_tokens: undefined,
+    temperature: undefined,
+    top_p: undefined,
+    frequency_penalty: undefined,
+    presence_penalty: undefined,
+    stop: undefined,
+    seed: undefined,
+    response_format: undefined,
+    reasoning_format: undefined,
+    reasoning_effort: undefined,
+    service_tier: undefined,
+    messages: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    tools: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    tool_choice: 'auto'
+  },
+  statusCode: 429,
+  responseHeaders: {
+    'alt-svc': 'h3=":443"; ma=86400',
+    'cache-control': 'private, max-age=0, no-store, no-cache, must-revalidate',
+    'cf-cache-status': 'DYNAMIC',
+    'cf-ray': '9e6b74edced01712-BLR',
+    connection: 'keep-alive',
+    'content-length': '378',
+    'content-type': 'application/json',
+    date: 'Fri, 03 Apr 2026 22:19:46 GMT',
+    'retry-after': '4',
+    server: 'cloudflare',
+    'set-cookie': '__cf_bm=RCWkY8muP4W7XTBTEP_GVkpGL00nl9Qs9K6pdgyaOKM-1775254786.2074158-1.0.1.1-ctCdDia6WFdLn3oUapAAugWt30DyfXaH_4O4RDA7Jfay7kfunVCTfVUmxqgkSPqM2Gs_xRBNLtHlpIBxPoPc2pHeODmmOQmOOjFjEdS_TgncbD_I0e12XJ3tvIR6Kja0; HttpOnly; Secure; Path=/; Domain=groq.com; Expires=Fri, 03 Apr 2026 22:49:46 GMT',
+    'strict-transport-security': 'max-age=15552000',
+    vary: 'Origin',
+    via: '1.1 google',
+    'x-groq-region': 'bom',
+    'x-ratelimit-limit-requests': '14400',
+    'x-ratelimit-limit-tokens': '6000',
+    'x-ratelimit-remaining-requests': '14399',
+    'x-ratelimit-remaining-tokens': '3608',
+    'x-ratelimit-reset-requests': '6s',
+    'x-ratelimit-reset-tokens': '23.92s',
+    'x-request-id': 'req_01knapwm63e218fe0e4s7d5wdz'
+  },
+  responseBody: '{"error":{"message":"Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01jp33vzrmf17v17x8znynac5x` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 2392, Requested 3931. Please try again in 3.23s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}\n',
+  isRetryable: true,
+  data: {
+    error: {
+      message: 'Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01jp33vzrmf17v17x8znynac5x` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 2392, Requested 3931. Please try again in 3.23s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing',
+      type: 'tokens'
+    }
+  }
+}
+ POST /api/claims 200 in 77s (next.js: 564ms, application-code: 76s)

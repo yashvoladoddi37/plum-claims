@@ -69,6 +69,7 @@ export interface ClaimInput {
   cashless_request?: boolean;
   previous_claims_same_day?: number;
   member_join_date?: string;    // ISO date string
+  strict_mode?: boolean;        // If false, bypass member and doctor reg validation
   documents: {
     prescription?: PrescriptionInput;
     bill?: BillInput;
