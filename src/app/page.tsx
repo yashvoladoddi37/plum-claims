@@ -140,6 +140,7 @@ const PIPELINE_STEPS = [
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function readSSEStream(
   res: Response,
+  onStep: (step: StepResult) => void,
   onWarning: (msg: string) => void,
 ): Promise<Record<string, any>> {
   const reader = res.body!.getReader();
@@ -162,6 +163,7 @@ async function readSSEStream(
       try {
         const event = JSON.parse(trimmed.slice(6));
         if (event.type === 'final') finalData = event;
+        else if (event.type === 'step') onStep(event.step as StepResult);
         else if (event.type === 'error') throw new Error(event.message);
         else if (event.type === 'warning') onWarning(event.message);
       } catch (e) {
@@ -196,6 +198,7 @@ export default function SubmitClaim() {
   const [sidebarFilter, setSidebarFilter] = useState<"all" | "pdf" | "image">("all");
   const [strictMode, setStrictMode] = useState(true);
   const [pipelineProgress, setPipelineProgress] = useState<number>(-1);
+  const [liveSteps, setLiveSteps] = useState<StepResult[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
   function toggleAgent(step: string) {
@@ -222,18 +225,14 @@ export default function SubmitClaim() {
     setLoading(true);
     setResult(null);
     setExpandedAgents({});
+    setLiveSteps([]);
     setPipelineProgress(0);
     setWarnings([]);
 
-    let currentStep = 0;
-    const timer = setInterval(() => {
-      currentStep++;
-      if (currentStep < PIPELINE_STEPS.length) {
-        setPipelineProgress(currentStep);
-      } else {
-        clearInterval(timer);
-      }
-    }, 1100);
+    const handleStep = (step: StepResult) => {
+      setLiveSteps(prev => [...prev, step]);
+      setPipelineProgress(prev => prev + 1);
+    };
 
     try {
       const formData = new FormData();
@@ -241,17 +240,9 @@ export default function SubmitClaim() {
       formData.append("strict_mode", String(strictMode));
 
       const res = await fetch("/api/claims", { method: "POST", body: formData });
-      const finalData = await readSSEStream(res, (msg) => setWarnings(prev => [...prev, msg]));
-
-      clearInterval(timer);
-      for (let i = currentStep + 1; i <= PIPELINE_STEPS.length; i++) {
-        setPipelineProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 120));
-      }
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const finalData = await readSSEStream(res, handleStep, (msg) => setWarnings(prev => [...prev, msg]));
       setResult(finalData);
     } catch (err) {
-      clearInterval(timer);
       setResult({ error: String(err) });
     } finally {
       setLoading(false);
@@ -264,18 +255,14 @@ export default function SubmitClaim() {
     setLoading(true);
     setResult(null);
     setExpandedAgents({});
+    setLiveSteps([]);
     setPipelineProgress(0);
     setWarnings([]);
 
-    let currentStep = 0;
-    const timer = setInterval(() => {
-      currentStep++;
-      if (currentStep < PIPELINE_STEPS.length) {
-        setPipelineProgress(currentStep);
-      } else {
-        clearInterval(timer);
-      }
-    }, 1100);
+    const handleStep = (step: StepResult) => {
+      setLiveSteps(prev => [...prev, step]);
+      setPipelineProgress(prev => prev + 1);
+    };
 
     try {
       const parsed = JSON.parse(jsonInput);
@@ -285,17 +272,9 @@ export default function SubmitClaim() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed),
       });
-      const finalData = await readSSEStream(res, (msg) => setWarnings(prev => [...prev, msg]));
-
-      clearInterval(timer);
-      for (let i = currentStep + 1; i <= PIPELINE_STEPS.length; i++) {
-        setPipelineProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 120));
-      }
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const finalData = await readSSEStream(res, handleStep, (msg) => setWarnings(prev => [...prev, msg]));
       setResult(finalData);
     } catch (err) {
-      clearInterval(timer);
       setResult({ error: String(err) });
     } finally {
       setLoading(false);
