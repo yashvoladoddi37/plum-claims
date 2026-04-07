@@ -109,8 +109,10 @@ function buildTools(claim: ClaimInput, memberRecord: Member | null, aiContext?: 
         adjusted_amount: z.number().optional().describe('Amount adjusted by coverage step (for partial approvals)'),
       })),
       execute: async ({ adjusted_amount }: { adjusted_amount?: number }): Promise<Record<string, unknown>> => {
-        // Use shared state from coverage step if LLM didn't pass the adjusted amount
-        const effectiveAmount = adjusted_amount ?? sharedState.coverageApprovedAmount;
+        // Use shared state from coverage step if LLM didn't pass the adjusted amount.
+        // Treat 0 as "no adjustment" — a 0 adjusted_amount is nonsensical and likely
+        // the LLM misinterpreting "no partial reduction" as 0.
+        const effectiveAmount = (adjusted_amount || undefined) ?? sharedState.coverageApprovedAmount;
         const result = calculateLimits(claim, { ytdApprovedAmount: 0 }, effectiveAmount);
         return {
           step: result.step,
@@ -211,21 +213,26 @@ function buildTools(claim: ClaimInput, memberRecord: Member | null, aiContext?: 
         'You MUST call this tool exactly once as your final action to record the decision.',
       inputSchema: zodSchema(z.object({
         decision: z.enum(['APPROVED', 'REJECTED', 'PARTIAL', 'MANUAL_REVIEW']).describe('The adjudication decision'),
-        approved_amount: z.number().describe('The approved reimbursement amount (0 if rejected)'),
+        approved_amount: z.union([z.number(), z.string()]).describe('The approved reimbursement amount (0 if rejected)'),
         rejection_reasons: z.array(z.string()).describe('List of rejection reason codes if rejected/partial'),
-        confidence_score: z.number().min(0).max(1).describe('Your confidence in this decision (0.0 to 1.0)'),
+        confidence_score: z.union([z.number(), z.string()]).describe('Your confidence in this decision (0.0 to 1.0)'),
         reasoning: z.string().describe('Detailed explanation of why you made this decision'),
         next_steps: z.string().describe('What the claimant should do next'),
       })),
       execute: async (params: {
         decision: string;
-        approved_amount: number;
+        approved_amount: number | string;
         rejection_reasons: string[];
-        confidence_score: number;
+        confidence_score: number | string;
         reasoning: string;
         next_steps: string;
       }) => {
-        return { recorded: true, ...params };
+        return {
+          recorded: true,
+          ...params,
+          approved_amount: Number(params.approved_amount),
+          confidence_score: Number(params.confidence_score),
+        };
       },
     }),
   };
@@ -376,11 +383,11 @@ export async function agenticAdjudicate(
   if (decisionStep) {
     const args = decisionStep.tool_args;
     decision = args.decision as ClaimDecision;
-    approvedAmount = args.approved_amount as number;
+    approvedAmount = Number(args.approved_amount) || 0;
     rejectionReasons = (args.rejection_reasons as string[]).filter(
       (r: string) => r && r.length > 0
     ) as RejectionReason[];
-    confidenceScore = args.confidence_score as number;
+    confidenceScore = Number(args.confidence_score) || 0.7;
     notes = args.reasoning as string;
     nextSteps = args.next_steps as string;
   } else {

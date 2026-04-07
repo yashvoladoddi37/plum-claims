@@ -2,9 +2,13 @@ import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 // GROQ_MODEL env var to switch between models:
-//   llama-3.3-70b-versatile  — best quality (100K TPD free limit)
-//   llama-3.1-8b-instant     — faster, higher limits (500K TPD), good for testing
-export const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+//   meta-llama/llama-4-scout-17b-16e-instruct — recommended: 30K TPM, 131k ctx, tool calling
+//   groq/compound-mini      — 70K TPM but NO tool calling (text-only tasks)
+//   openai/gpt-oss-20b      — 8K TPM, 131k context, tool use
+//   qwen/qwen3-32b          — 6K TPM, 131k context
+//   llama-3.3-70b-versatile — best quality but low limits
+//   llama-3.1-8b-instant    — fast but 6K TPM
+export const GROQ_MODEL = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 // Fetch all available Groq API keys from environment
 const getApiKeys = () => {

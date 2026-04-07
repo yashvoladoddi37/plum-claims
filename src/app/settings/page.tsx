@@ -165,7 +165,7 @@ export default function SettingsPage() {
               <li>Click &quot;Create API Key&quot;</li>
               <li>Copy the key and paste it below</li>
             </ol>
-            <p className="text-xs mt-2 text-[#5e5d59]">Free tier includes 500K tokens/day. The agent pipeline uses Llama models via Groq for fast inference.</p>
+            <p className="text-xs mt-2 text-[#5e5d59]">Free tier includes 30K tokens/min. The agent pipeline uses Groq for fast inference (default: Llama 4 Scout).</p>
           </div>
 
           {settings?.groq.maskedKeys && settings.groq.maskedKeys.length > 0 && (

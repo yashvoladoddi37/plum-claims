@@ -43,7 +43,7 @@ export function calculateLimits(
   const genericPerClaimLimit = getPerClaimLimit();
   const categoryLimit = getCategoryLimit(claim);
   const effectiveLimit = categoryLimit ?? genericPerClaimLimit;
-  const amountToCheck = adjustedAmount ?? claim.claim_amount;
+  const amountToCheck = adjustedAmount || claim.claim_amount;
 
   if (amountToCheck > effectiveLimit) {
     reasons.push('PER_CLAIM_EXCEEDED');

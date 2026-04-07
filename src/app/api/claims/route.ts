@@ -9,7 +9,7 @@ import { eq, desc, sql } from 'drizzle-orm';
 import { adjudicate } from '@/lib/engine/pipeline';
 import { ClaimInput, Member, AIContext, StepResult } from '@/lib/types';
 import { extractFromDocuments, runMedicalReview } from '@/lib/ai/extract';
-import { isGroqAvailable } from '@/lib/ai/groq';
+import { isGroqAvailable, GROQ_MODEL } from '@/lib/ai/groq';
 import { generateExplanation } from '@/lib/engine/explainability';
 import { agenticAdjudicate } from '@/lib/ai/agent';
 import { v4 as uuidv4 } from 'uuid';
@@ -165,16 +165,32 @@ export async function POST(request: NextRequest) {
             agentReasoning = agentDecision.agent_reasoning;
           } catch (agentErr) {
             // Fallback to deterministic pipeline if agent fails
-            const errMsg = String(agentErr).toLowerCase();
-            const isRateLimit = errMsg.includes('rate limit') || errMsg.includes('429') || errMsg.includes('rate_limit');
+            const errMsg = String(agentErr);
+            const errMsgLower = errMsg.toLowerCase();
+            const isRateLimit = errMsgLower.includes('rate limit') || errMsgLower.includes('429') || errMsgLower.includes('rate_limit');
+            const isModelError = errMsgLower.includes('does not exist') || errMsgLower.includes('not supported') || errMsgLower.includes('model_not_found');
+            const isToolError = errMsgLower.includes('tool call') || errMsgLower.includes('tool_use');
+
+            // Extract a concise error reason for the UI
+            let errorReason: string;
+            if (isRateLimit) {
+              errorReason = 'AI API rate limit exhausted';
+            } else if (isModelError) {
+              errorReason = `AI model error: ${GROQ_MODEL} is unavailable or unsupported`;
+            } else if (isToolError) {
+              errorReason = 'AI model returned malformed tool call — retrying with rule engine';
+            } else {
+              errorReason = `AI agent error: ${errMsg.slice(0, 150)}`;
+            }
+
             sendUpdate({
               type: 'warning',
-              message: isRateLimit
-                ? 'AI API rate limit exhausted — falling back to rule-based adjudication (results unaffected)'
-                : 'AI agent error — falling back to rule-based adjudication',
+              message: `${errorReason} — falling back to rule-based adjudication`,
             });
             console.warn('⚠️ Agent failed, falling back to deterministic pipeline:', agentErr);
             decision = adjudicate(claimInput, { member: member || null, aiContext }, claimId);
+            // Prepend the actual error to decision notes so the UI shows the real cause
+            decision.notes = `[Agent fallback: ${errorReason}] ${decision.notes}`;
             for (const step of decision.steps) {
               sendUpdate({ type: 'step', step });
             }

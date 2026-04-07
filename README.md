@@ -113,8 +113,8 @@ Open [http://localhost:3737](http://localhost:3737).
 
 | Page | URL | Description |
 |------|-----|-------------|
-| Dashboard | `/` | Claims list with metrics, approval rates, processing times |
-| Submit Claim | `/submit` | Upload documents or paste structured JSON |
+| Submit Claim | `/` | Upload documents or paste structured JSON |
+| Dashboard | `/dashboard` | Claims list with metrics, approval rates, processing times |
 | Claim Detail | `/claims/[id]` | Amount waterfall, line items, agent reasoning, counterfactuals, review panel |
 | Policy Explorer | `/policy` | Natural language Q&A against the policy (RAG-powered) |
 | Test Runner | `/test-runner` | Run and visualize all 30 rule-engine test cases |
@@ -233,7 +233,8 @@ src/
   app/
     api/claims/route.ts .... Claim submission + listing
     api/rag/ask/route.ts ... Policy Q&A endpoint
-    submit/page.tsx ........ Claim submission UI
+    page.tsx ............... Claim submission UI (root route)
+    dashboard/page.tsx ..... Claims list with metrics
     claims/[id]/page.tsx ... Claim detail + review UI
     policy/page.tsx ........ Policy explorer UI
     test-runner/page.tsx ... Test runner UI
