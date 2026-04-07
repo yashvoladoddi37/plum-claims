@@ -17,8 +17,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Plum OPD Claims — AI-Powered Adjudication",
-  description: "AI-Powered OPD Claim Adjudication System with RAG, Explainability, and Human-in-the-Loop Review",
+  title: "Plum Claims",
+  description: "Intelligent OPD claim adjudication",
+  icons: { icon: "/favicon.png" },
 };
 
 function MobileNav() {
