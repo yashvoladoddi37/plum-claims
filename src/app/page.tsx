@@ -334,44 +334,34 @@ export default function SubmitClaim() {
                   const isAdded = files.some(f => f.name === doc.filename);
                   return (
                     <div key={doc.filename}
-                      className="rounded-lg border-2 p-3 transition-all"
+                      className="rounded-lg border p-3 transition-all"
                       style={isAdded
                         ? { borderColor: 'rgba(201,100,66,0.4)', background: 'rgba(201,100,66,0.05)' }
-                        : { borderColor: 'transparent', background: '#f0eee6' }}
+                        : { borderColor: '#e8e6dc', background: '#f0eee6' }}
                     >
-                      <div className="flex items-start gap-2.5">
-                        <div className={`w-8 h-8 rounded-md flex items-center justify-center text-base shrink-0
-                          ${doc.type === "pdf" ? "bg-[#b53333]/10 text-[#b53333]" : "bg-blue-500/15 text-blue-600"}`}>
-                          {doc.type === "pdf" ? "📑" : "🖼️"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-xs leading-tight" style={{ color: '#141413' }}>{doc.name}</p>
-                          <p className="text-[10px] mt-0.5 line-clamp-2" style={{ color: '#5e5d59' }}>{doc.description}</p>
-                          <div className="flex items-center gap-1.5 mt-2">
-                            <Badge className={`text-[10px] px-1.5 py-0 ${doc.badgeColor}`}>
-                              {doc.expectedOutcome}
-                            </Badge>
-                            <div className="flex gap-1 ml-auto">
-                              <button
-                                onClick={() => setPreviewDoc(previewDoc?.filename === doc.filename ? null : doc)}
-                                className="text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors"
-                                style={{ background: 'rgba(20,20,19,0.08)', color: '#141413' }}
-                              >
-                                {previewDoc?.filename === doc.filename ? "Hide" : "Preview it"}
-                              </button>
-                              {isAdded ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold" style={{ background: 'rgba(201,100,66,0.15)', color: '#c96442' }}>Added ✓</span>
-                              ) : (
-                                <button
-                                  onClick={() => addTestDocument(doc)}
-                                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#27a644]/15 text-[#27a644] hover:bg-[#27a644]/25 transition-colors font-semibold"
-                                >
-                                  + Add
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                      <p className="font-semibold text-xs leading-tight" style={{ color: '#141413' }}>{doc.name}</p>
+                      <p className="text-[10px] mt-1 line-clamp-1" style={{ color: '#5e5d59' }}>{doc.description}</p>
+                      <div className="flex items-center gap-2 mt-3">
+                        <Badge className={`text-[10px] px-1.5 py-0.5 ${doc.badgeColor}`}>
+                          {doc.expectedOutcome}
+                        </Badge>
+                        <button
+                          onClick={() => setPreviewDoc(previewDoc?.filename === doc.filename ? null : doc)}
+                          className="text-[11px] px-3 py-1 rounded-md font-semibold transition-colors"
+                          style={{ background: 'rgba(20,20,19,0.08)', color: '#141413' }}
+                        >
+                          {previewDoc?.filename === doc.filename ? "Hide" : "Preview"}
+                        </button>
+                        {isAdded ? (
+                          <span className="text-[11px] px-3 py-1 rounded-md font-semibold ml-auto" style={{ background: 'rgba(201,100,66,0.15)', color: '#c96442' }}>Added ✓</span>
+                        ) : (
+                          <button
+                            onClick={() => addTestDocument(doc)}
+                            className="text-[11px] px-3 py-1 rounded-md bg-[#27a644]/15 text-[#27a644] hover:bg-[#27a644]/25 transition-colors font-semibold ml-auto"
+                          >
+                            + Add
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
