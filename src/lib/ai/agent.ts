@@ -240,7 +240,7 @@ function buildTools(claim: ClaimInput, memberRecord: Member | null, aiContext?: 
 
 // ---- System Prompt ----
 
-const SYSTEM_PROMPT = `You are an expert insurance claims adjudicator for Plum, an Indian health insurance company.
+const SYSTEM_PROMPT = `You are an expert insurance claims adjudicator for an Indian health insurance company.
 Your job is to process OPD (Outpatient Department) insurance claims by analyzing documents and applying policy rules.
 
 ## Your Process

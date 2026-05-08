@@ -1,0 +1,125 @@
+YC STARTUP SCHOOL 2026 — APPLICATION ANSWERS
+=============================================
+Applicant: Yashpreet Voladoddi
+
+
+BASICS
+------
+Name: Yashpreet Voladoddi
+Email: yash.voladoddi2@gmail.com
+Date of Birth: [FILL IN]
+Gender: [FILL IN]
+City where you currently live: Bangalore
+Country of citizenship: India
+
+
+BACKGROUND
+----------
+LinkedIn: https://linkedin.com/in/yashpreet-voladoddi
+
+
+EDUCATION
+---------
+B.M.S College of Engineering, Bangalore, India
+Bachelor of Engineering in Artificial Intelligence and Machine Learning
+Dec 2020 - Jun 2024
+CGPA: 8.0/10.0
+
+
+WORK HISTORY
+------------
+1. Kapi AI — AI Engineer (Apr 2025 - Present, Bangalore)
+   Founding engineer. Architected enterprise RAG pipelines on Azure AI Search, built multi-step agentic AI workflows with ReAct framework, deployed Azure OpenAI endpoints with MLOps practices. Created a visual GenAI App Builder (Next.js, ReactFlow) with Composio integration. 350+ commits across Golang, Node.js, and Python.
+
+2. HeyCoach — AI Engineer (Dec 2024 - Mar 2025, Bangalore)
+   Built AI-driven lead generation MVP achieving cost per lead of 38 INR (80% lower than company average). Automated 60+ social media posts/month using AI agents with LangGraph and Claude API.
+
+3. Lumio TV (Circuit House) — Backend AI Intern (Sep 2024 - Nov 2024, Bangalore)
+   Built Golang-based AWS Lambda APIs. Calibrated LLaMA 3.2 (11B) vision-language model for automated metadata extraction. Provisioned AWS infra with Terraform.
+
+4. Centre for AI and Robotics, DRDO — ML Research Intern (Aug 2023 - Nov 2023, Bangalore)
+   Prototyped real-time drone detection system using YOLOv5, improving mAP from 0.73 to 0.91.
+
+
+PERSONAL
+--------
+Personal website: [FILL IN or leave blank]
+GitHub URL: https://github.com/yashvoladoddi37
+Twitter URL: [FILL IN or leave blank]
+
+
+ACCOMPLISHMENTS
+===============
+
+List any competitions/awards you have won, or papers you've published:
+----------------------------------------------------------------------
+
+- Top 10 Finalist — PaySense Agentic Concierge, Pine Labs Playground AI Hackathon 2025. Built a multi-agent e-commerce concierge protocol using AWS Bedrock (Claude Sonnet) with our team. https://github.com/KushagarGoel/PaySense
+
+- Top 10 Finish — Hashcode Hackathon 2020, PES University.
+
+- Gold Medal — Karnataka State Taekwondo, National Championships 2022. Represented Karnataka State Taekwondo Team in National Championships for 2 consecutive years.
+
+- 22nd out of 961 runners (top 2.3%) — PhonePe Bengaluru Midnight Marathon 5K, December 2025. Finished in 25:06 at 5:02/km pace after only 3 months of running.
+
+- Founded Leo Satva social impact club as Vice President; grew to 350+ members in one year.
+
+
+Tell us about things you've built before:
+------------------------------------------
+
+1. Plum Claims — AI Insurance Claim Adjudication System (Apr 2026)
+Built an end-to-end agentic AI system that automates Indian OPD insurance claim adjudication. An LLM agent (Llama 4 Scout via Groq) autonomously decides which of 9 tools to call: eligibility verification, document validation, coverage analysis, limit calculation, fraud detection, medical necessity review, and policy RAG search. The system includes a 3-tier OCR pipeline (local PDF text extraction -> Tesseract.js -> Gemini Vision fallback for handwritten docs) where 80% of claims use zero API quota. RAG-based policy Q&A uses HuggingFace MiniLM-L6-v2 embeddings running entirely on CPU. 30 structured test cases validate the deterministic rule engine. The agent's decisions include full explainability with counterfactuals, amount waterfalls, and human-in-the-loop review with appeals. Built in 10 days, deployed on Railway.
+Live: https://plum-claims-production.up.railway.app
+GitHub: https://github.com/yashvoladoddi37/plum-claims
+
+2. PaySense — Multi-Agent E-Commerce Concierge (Mar 2025, Pine Labs Hackathon)
+Built a multi-agent e-commerce protocol for the Pine Labs Playground AI Hackathon. Used AWS Bedrock with Claude Sonnet to create specialized agents that handle product search, recommendations, and payment flows. Top 10 finalist.
+GitHub: https://github.com/KushagarGoel/PaySense
+
+3. iPod Classic Web Player (Personal project)
+Built on top of the ipod-classic-js open source project. I downloaded every song from a Spotify playlist, uploaded them to a file hosting service, and wired the audio URLs into a faithful web recreation of the iPod Classic interface — complete with click wheel navigation, album art, lyrics display, and even a Breakout game. A creative hack to get Spotify music playing in a retro interface without needing Spotify's API or a premium account.
+GitHub: https://github.com/yashvoladoddi37/birthday-demo/tree/master/ipod-classic-js
+
+4. Japanese Kanji Character Generation Model
+Fine-tuned Stable Diffusion to generate 6,000+ unique Kanji characters from English text prompts. Open-sourced on HuggingFace with 80+ downloads.
+HuggingFace: https://huggingface.co/yashvoladoddi37/kanji-diffusion-v1-4
+
+5. Movie Poster OCR System (Lumio TV)
+Built a vision-language OCR system using LLaMA 3.2 (11B) that processed 11,000+ movie posters with automated title extraction and metadata enrichment.
+
+6. GenAI App Builder (Kapi AI)
+Created a visual drag-and-drop agent pipeline designer using Next.js and ReactFlow with Composio integration, enabling non-technical users to build AI workflows with unified authentication for GitHub, Slack, and Jira.
+
+7. Real-Time Drone Detection System (DRDO)
+Prototyped a YOLOv5-based drone detection system during research internship at DRDO's Centre for AI and Robotics, improving mean average precision from 0.73 to 0.91.
+
+
+Please tell us about a time you most successfully hacked some (non-computer) system to your advantage:
+------------------------------------------------------------------------------------------------------
+
+During undergrad, a friend and I were exhausted from a long day of college work and wanted to watch Gran Turismo on opening day, but we were flat broke — not a rupee between us. At the mall, we noticed that the theatre's exit doors on the upper floor opened into the same hallway as the entrance below, and security only checked tickets at the ground-floor entry. So we walked in through the exit level like we were leaving a previous show, slipped past the guards who assumed we were just heading out, and found seven empty seats in the last row — premium section. We watched the entire movie for free. Then, still riding the high, we snuck into a second screen showing a cartoon (I think it was Cars) using the same trick. Two movies, zero rupees, premium seats. The system assumed everyone exits the same way they enter. We didn't.
+During undergrad, a friend and I were exhausted from a long day of college work and wanted to watch Gran Turismo on opening day, but we were flat broke — not a rupee between us. At the mall, we noticed that the theatre's exit doors on the upper floor opened into the same hallway as the entrance below, and security only checked tickets at the ground-floor entry. So we walked in through the exit level like we were leaving a previous show, slipped past the guards who assumed we were just heading out, and found seven empty seats in the last row — premium section. We watched the entire movie for free. Then, still riding the high, we snuck into a second screen showing a cartoon (I think it was Cars) using the same trick. Two movies, zero rupees, premium seats. The system assumed everyone exits the same way they enter. We didn't.
+
+
+Please tell us in one or two sentences about the most impressive thing you have built or achieved:
+---------------------------------------------------------------------------------------------------
+
+I built an autonomous AI claims adjudication agent — 3-tier OCR pipeline, RAG-based policy reasoning, 9-tool agentic loop, and explainable decisions with human-in-the-loop review — in 10 days as a solo builder. I also placed 22nd out of 961 runners (top 2.3%) in my first 5K race after just three months of running.
+
+
+CODING AGENT SESSION
+====================
+
+Upload file: coding_session_export.txt
+
+Description for the upload:
+---------------------------
+
+I built a working AI claims adjudication system with an LLM agent loop, 3-tier OCR, RAG, and 30 test cases. Then I asked Claude Code one question: "Is this truly agentic? Be brutally honest."
+
+Claude Code read through my agent.ts line by line and identified the architectural flaw — lines 398-435 where a deterministic post-processing step overrode the LLM's decisions. If you can't trust the agent and must correct it with if-else, the agent isn't deciding — the rule engine is. The LLM was a "glorified function sequencer."
+
+The session then became an architectural redesign: splitting the system into hard gates (deterministic code for arithmetic, date math, null checks) and judgment calls (exclusion interpretation, cross-document consistency, clinical coherence — things only an LLM can reason about). Includes new tool specs with real input/output schemas, a redesigned agent flow, and a spec-driven development plan.
+
+It shows how I use AI coding tools — not to generate boilerplate, but as a technical peer that reads my actual code and tells me when my architecture is wrong.

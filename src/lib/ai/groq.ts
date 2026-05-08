@@ -8,7 +8,7 @@ import { generateText } from 'ai';
 //   qwen/qwen3-32b          — 6K TPM, 131k context
 //   llama-3.3-70b-versatile — best quality but low limits
 //   llama-3.1-8b-instant    — fast but 6K TPM
-export const GROQ_MODEL = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+export const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 // Fetch all available Groq API keys from environment
 const getApiKeys = () => {

@@ -33,7 +33,7 @@ const SEED_MEMBERS = [
   { id: 'EMP028', name: 'Vivek Mishra', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
   { id: 'EMP029', name: 'Neha Srinivasan', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
   { id: 'EMP030', name: 'Aditya Gowda', join_date: '2024-08-15', policy_start_date: '2024-08-15' },
-  { id: 'PLUM-12345678', name: 'Ravi Kumar', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
+  { id: 'MBR-12345678', name: 'Ravi Kumar', join_date: '2024-01-01', policy_start_date: '2024-01-01' },
 ];
 
 export async function seedMembers() {
@@ -42,13 +42,16 @@ export async function seedMembers() {
     if (!existing) {
       await db.insert(members).values({
         ...member,
-        policy_id: 'PLUM_OPD_2024',
+        policy_id: 'OPD_ADVANTAGE_2024',
       }).run();
     }
   }
 }
 
 // Auto-seed on import — store the promise so routes can await it
-export const seedReady = seedMembers().catch(err => {
-  console.warn('⚠️ Seed failed (DB may be unavailable):', err);
-});
+export const seedReady = seedMembers()
+  .then(() => console.log('🗄️ Database seeding check complete'))
+  .catch(err => {
+    console.warn('⚠️ Seed failed (DB may be unavailable or locked):', err.message || err);
+    // Do not rethrow, let the app start anyway
+  });

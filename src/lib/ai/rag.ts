@@ -135,16 +135,23 @@ function chunkAdjudicationRules(): KnowledgeChunk[] {
   // Read the actual markdown file
   let rulesText = '';
   try {
-    const rulesPath = path.join(process.cwd(), '..', 'adjudication_rules.md');
-    rulesText = fs.readFileSync(rulesPath, 'utf-8');
-  } catch {
-    try {
-      const altPath = path.join(process.cwd(), 'adjudication_rules.md');
-      rulesText = fs.readFileSync(altPath, 'utf-8');
-    } catch {
-      // Fallback if file not found — should not happen in production
-      rulesText = '';
+    // Attempt multiple path variations for different environments (local vs Railway)
+    const possiblePaths = [
+      path.join(process.cwd(), 'adjudication_rules.md'),
+      path.join(process.cwd(), '..', 'adjudication_rules.md'),
+      path.join(process.cwd(), 'plum-claims', 'adjudication_rules.md'),
+    ];
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        console.log(`📖 Loading adjudication rules from: ${p}`);
+        rulesText = fs.readFileSync(p, 'utf-8');
+        break;
+      }
     }
+  } catch (err) {
+    console.warn('⚠️ Failed to read adjudication_rules.md from disk:', err);
+    rulesText = '';
   }
 
   if (!rulesText) return chunks;
@@ -239,9 +246,17 @@ export async function initializeKnowledgeBase(): Promise<void> {
 
   try {
     // Batch embed all chunks using local model
-    for (const chunk of knowledgeBase) {
-      chunk.embedding = await embedText(chunk.text);
-    }
+    console.log(`🧠 Generating embeddings for ${knowledgeBase.length} chunks in parallel...`);
+    const startTime = Date.now();
+    
+    // Process in parallel to avoid long cold-start timeouts
+    await Promise.all(
+      knowledgeBase.map(async (chunk) => {
+        chunk.embedding = await embedText(chunk.text);
+      })
+    );
+
+    console.log(`✅ RAG Knowledge Base ready in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
     isInitialized = true;
     console.log(`✅ RAG knowledge base initialized with ${knowledgeBase.length} chunks`);
   } catch (error) {

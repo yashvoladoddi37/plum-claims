@@ -1,6 +1,6 @@
 import { runAllTestCases } from '../src/lib/engine/test-runner';
 
-console.log('\n🏥 Plum OPD Claim Adjudication — Test Suite\n');
+console.log('\n🏥 ClaimSense — OPD Adjudication Test Suite\n');
 console.log('='.repeat(70));
 
 const results = runAllTestCases();

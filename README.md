@@ -1,12 +1,12 @@
 <div align="center">
 
-# Plum OPD Claim Adjudication System
+# ClaimSense — AI-Powered OPD Claim Adjudication
 
-An AI-powered system that automates adjudication of Outpatient Department (OPD) insurance claims.
+A personal project that automates adjudication of Outpatient Department (OPD) insurance claims using an AI agent.
 An LLM agent decides which checks to run, queries a policy knowledge base via RAG,
 and produces a decision with full explainability and human-in-the-loop review.
 
-[Live Demo](https://plum-claims-production.up.railway.app)
+[Live Demo](https://claimsense-production.up.railway.app)
 
 </div>
 
@@ -64,7 +64,7 @@ https://github.com/user-attachments/assets/15872534-987e-45a6-9597-3a2316e2fe4f
 ### Installation
 
 ```bash
-cd plum-claims
+cd claimsense
 npm install
 ```
 

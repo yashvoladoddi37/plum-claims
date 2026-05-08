@@ -6,7 +6,7 @@ export const members = sqliteTable('members', {
   name: text('name').notNull(),
   join_date: text('join_date').notNull(),          // ISO date
   policy_start_date: text('policy_start_date').notNull(),
-  policy_id: text('policy_id').default('PLUM_OPD_2024'),
+  policy_id: text('policy_id').default('OPD_ADVANTAGE_2024'),
 });
 
 // ---------- Claims Table (denormalized — everything in one row) ----------
