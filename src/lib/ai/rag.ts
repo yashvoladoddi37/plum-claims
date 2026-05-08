@@ -17,11 +17,18 @@ let embeddingPipeline: FeatureExtractionPipeline | null = null;
 
 async function getEmbeddingPipeline(): Promise<FeatureExtractionPipeline> {
   if (!embeddingPipeline) {
+    console.log('🤖 Loading @huggingface/transformers...');
     const { pipeline } = await import('@huggingface/transformers');
-    embeddingPipeline = await pipeline(
-      'feature-extraction',
-      'Xenova/all-MiniLM-L6-v2',
-    ) as FeatureExtractionPipeline;
+    try {
+      embeddingPipeline = await pipeline(
+        'feature-extraction',
+        'Xenova/all-MiniLM-L6-v2',
+      ) as FeatureExtractionPipeline;
+      console.log('✅ Embedding pipeline loaded');
+    } catch (err) {
+      console.error('❌ Failed to load embedding pipeline:', err);
+      throw err;
+    }
   }
   return embeddingPipeline;
 }
@@ -260,7 +267,8 @@ export async function initializeKnowledgeBase(): Promise<void> {
     isInitialized = true;
     console.log(`✅ RAG knowledge base initialized with ${knowledgeBase.length} chunks`);
   } catch (error) {
-    console.warn('⚠️  Failed to initialize RAG embeddings, falling back to keyword search:', error);
+    console.error('❌ RAG Initialization failed:', error);
+    // Continue without RAG if it fails — avoid crashing the whole app
     isInitialized = true; // Mark as initialized even on failure — we'll use keyword fallback
   }
 }
