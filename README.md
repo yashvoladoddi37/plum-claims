@@ -6,7 +6,7 @@ A personal project that automates adjudication of Outpatient Department (OPD) in
 An LLM agent decides which checks to run, queries a policy knowledge base via RAG,
 and produces a decision with full explainability and human-in-the-loop review.
 
-[Live Demo](https://claimsense-production.up.railway.app)
+[Live Demo](https://claimsense.onrender.com)
 
 </div>
 
@@ -48,7 +48,7 @@ https://github.com/user-attachments/assets/15872534-987e-45a6-9597-3a2316e2fe4f
 | OCR | unpdf + tesseract.js + Gemini Vision | 3-tier: local PDF text, local image OCR, cloud fallback for low-confidence cases |
 | Embeddings | HuggingFace transformers.js (all-MiniLM-L6-v2) | 384-dim vectors, runs on CPU, no API key required |
 | Database | Turso (libSQL) + Drizzle ORM | Serverless SQLite with type-safe queries |
-| Deployment | Railway | Persistent Node.js process — no serverless timeout limits for the agentic loop |
+| Deployment | Render | Persistent Node.js process — no serverless timeout limits for the agentic loop |
 
 ---
 
@@ -252,7 +252,7 @@ src/
 
 **Groq key rotation.** Up to 3 API keys with automatic rotation on 429 rate limits, effectively tripling the free tier quota.
 
-**Railway over Vercel.** The agentic loop takes 15-30 seconds per claim. Railway runs a persistent Node.js process with no timeout limits, compared to Vercel's 10-second free tier limit on serverless functions.
+**Render over Vercel.** The agentic loop takes 15-30 seconds per claim. Render runs a persistent Node.js process with no timeout limits, compared to Vercel's 10-second free tier limit on serverless functions.
 
 ---
 
@@ -260,7 +260,7 @@ src/
 
 | Component | Service | Details |
 |-----------|---------|---------|
-| App | Railway | Next.js 16, persistent Node.js process |
+| App | Render | Next.js 16, persistent Node.js process |
 | Database | Turso | Cloud SQLite, 30 seeded members |
 | LLM | Groq | Llama 3.3 70B (extraction, medical review, agent) |
 | OCR Fallback | Google Gemini | 2.5 Flash Vision for low-quality documents |
